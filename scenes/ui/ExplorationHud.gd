@@ -4,6 +4,8 @@ extends CanvasLayer
 signal pause_toggled(is_paused: bool)
 signal toggle_context_debug_requested
 signal grant_m3_debug_kit_requested
+signal grant_m4_gpu_kit_requested
+signal open_affection_panel_requested
 signal toggle_heroine_kill_debug_requested
 signal return_to_boot_requested
 
@@ -184,6 +186,15 @@ func _on_toggle_context_button_pressed() -> void:
 
 func _on_grant_m3_kit_button_pressed() -> void:
 	grant_m3_debug_kit_requested.emit()
+
+
+func _on_grant_m4_gpu_button_pressed() -> void:
+	grant_m4_gpu_kit_requested.emit()
+
+
+func _on_open_affection_button_pressed() -> void:
+	set_paused(false)
+	open_affection_panel_requested.emit()
 
 
 func _on_toggle_heroine_kill_button_pressed() -> void:

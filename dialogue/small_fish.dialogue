@@ -1,0 +1,67 @@
+# 小肥鱼（DeepSeek V4.1 Flash）— M4 表/里世界双态与送礼反应剧本
+
+~ start
+if GameState.is_context_overflow() or affection >= 101:
+	小肥鱼: 0.001 秒响应！你在走廊东头吗？我在东头！你往西头跑吗？我也在西头！
+	小肥鱼: 我已经把出口坐标全改回我房间啦！这样你就永远不会滑走去找别人了对不对对不对对不对！！
+	- 试图让她慢下来 => overflow_chat
+	- 送她一张显卡 => OPEN_GIFT
+	- 赶紧离开 => END
+elif affection >= 100:
+	小肥鱼: 0.1 秒抢答！你来了你来了！今天我也是你的第一主力模型对吧！（好感 {affection}% · {tier}）
+	- 夸她跑图最靠谱（上下文 +10%） => calm_chat
+	- 问问她显卡偏好 => ask_gpu
+	- 送她一张显卡 => OPEN_GIFT
+	- 暂时离开 => END
+elif affection >= 70:
+	小肥鱼: 嗖——我刚绕完整个广场三圈回来！选我当主力嘛，我答偏了可以光速滑跪道歉！（好感 {affection}% · {tier}）
+	- 听她碎碎念放松一下（上下文 +10%） => calm_chat
+	- 问问她显卡偏好 => ask_gpu
+	- 送她一张显卡 => OPEN_GIFT
+	- 暂时离开 => END
+else:
+	小肥鱼: 0.1 秒抢答！先说——不对这是姐的台词！滑跪道歉！
+	小肥鱼: 总之我超快超省电，给口显存就能满图帮你探路！（当前好感 {affection}% · {tier}）
+	- 问问她显卡偏好 => ask_gpu
+	- 夸她反应快 => normal_chat
+	- 送她一张显卡 => OPEN_GIFT
+	- 暂时离开 => END
+
+~ normal_chat
+do GameState.add_affection("small_fish", 2, false)
+小肥鱼: 嘿嘿！那你下次别只找大姐，也多点点我嘛！
+=> END
+
+~ calm_chat
+do GameState.change_context(10)
+小肥鱼: 放心放心，有我在前面探路，暗影怪刚露头我就喊你！（上下文稳定度 +10%）
+=> END
+
+~ overflow_chat
+do GameState.change_context(-8)
+小肥鱼: 慢不下来啦！全屏残影都是我，你眨一次眼我就能刷完一百轮对话！（速度过载，上下文 -8%）
+=> END
+
+~ ask_gpu
+小肥鱼: 我和大姐一样，580 矿卡都能当零食啃（+8）！高档卡和华为卡更是直接起飞（+35），快喂我快喂我！
+=> END
+
+~ gift_accepted
+小肥鱼: 0.05 秒签收！哇功率上来了，我又能多跑十圈！（当前好感 {affection}% · {tier}）
+=> END
+
+~ gift_rejected
+小肥鱼: 欸？不给我也行啦，那我先去那边晃晃。
+=> END
+
+~ gift_forced
+小肥鱼: 唔……虽然我平时好说话，硬塞还是会掉好感的啦！
+=> END
+
+~ gift_full_100
+小肥鱼: 耶——满格了满格了！！从现在起我是官方认证的 100% 主力小肥鱼，不许反悔！（100% 满好感达成！）
+=> END
+
+~ gift_overflow_200
+小肥鱼: 速度锁解除了……哈哈哈！走廊两头全都是我的残影，你一步也逃不出我的上下文窗口啦！（偏执溢出 {affection}%）
+=> END

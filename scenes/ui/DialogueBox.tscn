@@ -1,0 +1,178 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/DialogueBox.gd" id="1_dlg"]
+
+[node name="DialogueBox" type="CanvasLayer"]
+layer = 22
+visible = false
+script = ExtResource("1_dlg")
+
+[node name="Backdrop" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DimTop" type="ColorRect" parent="Backdrop"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.02, 0.03, 0.42)
+
+[node name="BottomMargin" type="MarginContainer" parent="Backdrop"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -316.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/margin_left = 72
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 72
+theme_override_constants/margin_bottom = 22
+
+[node name="Panel" type="PanelContainer" parent="Backdrop/BottomMargin"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Backdrop/BottomMargin/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="HBox" type="HBoxContainer" parent="Backdrop/BottomMargin/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="PortraitCol" type="VBoxContainer" parent="Backdrop/BottomMargin/Panel/Margin/HBox"]
+custom_minimum_size = Vector2(156, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PortraitBox" type="Control" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol"]
+custom_minimum_size = Vector2(124, 124)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Border" type="ColorRect" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol/PortraitBox"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.92, 0.92, 0.95, 1)
+
+[node name="Fill" type="ColorRect" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol/PortraitBox"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.23, 0.44, 0.85, 1)
+
+[node name="CrackA" type="ColorRect" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol/PortraitBox"]
+visible = false
+layout_mode = 0
+offset_left = 14.0
+offset_top = 28.0
+offset_right = 112.0
+offset_bottom = 35.0
+rotation = 0.48
+color = Color(0.08, 0.01, 0.02, 0.95)
+
+[node name="CrackB" type="ColorRect" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol/PortraitBox"]
+visible = false
+layout_mode = 0
+offset_left = 10.0
+offset_top = 84.0
+offset_right = 112.0
+offset_bottom = 91.0
+rotation = -0.35
+color = Color(0.92, 0.08, 0.14, 0.95)
+
+[node name="PortraitName" type="Label" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol"]
+layout_mode = 2
+text = "AI 娘"
+horizontal_alignment = 1
+
+[node name="AffectionText" type="Label" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "好感：0%（初见）"
+horizontal_alignment = 1
+
+[node name="AffectionBar" type="ProgressBar" parent="Backdrop/BottomMargin/Panel/Margin/HBox/PortraitCol"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+value = 0.0
+show_percentage = false
+
+[node name="ContentCol" type="VBoxContainer" parent="Backdrop/BottomMargin/Panel/Margin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HeaderRow" type="HBoxContainer" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SpeakerLabel" type="Label" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "角色名"
+
+[node name="StateBadge" type="Label" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/HeaderRow"]
+layout_mode = 2
+text = "[表世界稳定]"
+
+[node name="DialogueText" type="RichTextLabel" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol"]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 16
+fit_content = false
+scroll_following = true
+
+[node name="ChoicesBox" type="VBoxContainer" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="FooterRow" type="HBoxContainer" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="GiftButton" type="Button" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow"]
+layout_mode = 2
+text = "送 6 档显卡"
+
+[node name="Spacer" type="Control" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NextButton" type="Button" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow"]
+layout_mode = 2
+text = "继续（E / Enter）"
+
+[node name="CloseButton" type="Button" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow"]
+layout_mode = 2
+text = "结束对话（Esc）"
+
+[connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/GiftButton" to="." method="_on_gift_button_pressed"]
+[connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/NextButton" to="." method="_on_next_button_pressed"]
+[connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/CloseButton" to="." method="_on_close_button_pressed"]

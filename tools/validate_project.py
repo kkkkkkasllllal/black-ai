@@ -825,6 +825,79 @@ class Validator:
         self.ok("静态规范扫描完成：.gd 脚本 {} 个 / .tscn 场景 {} 个".format(len(gd_files), len(tscn_files)))
         return gd_files
 
+    # ---------------------------------------------------------------- 3.5 对话剧本校验
+
+    def check_dialogue_files(self) -> None:
+        dialogue_dir = self.root / "dialogue"
+        if not dialogue_dir.is_dir():
+            return
+        dialogue_files = sorted(dialogue_dir.glob("*.dialogue"))
+        if not dialogue_files:
+            self.err("dialogue/ 目录下缺少 .dialogue 剧本文件")
+            return
+
+        required_heroine_sections = {
+            "start",
+            "gift_accepted",
+            "gift_rejected",
+            "gift_forced",
+            "gift_full_100",
+            "gift_overflow_200",
+        }
+        special_targets = {"END", "OPEN_GIFT"}
+
+        found_stems: Set[str] = set()
+        for df in dialogue_files:
+            rel = df.relative_to(self.root).as_posix()
+            found_stems.add(df.stem)
+            try:
+                lines = df.read_text(encoding="utf-8").splitlines()
+            except Exception as exc:
+                self.err("无法读取对话剧本 {}: {}".format(rel, exc))
+                continue
+
+            sections: Set[str] = set()
+            jumps: List[Tuple[int, str]] = []
+            for lineno, raw in enumerate(lines, start=1):
+                stripped = raw.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if stripped.startswith("~"):
+                    sec = stripped[1:].strip()
+                    if not sec:
+                        self.err("{}:{}: 空段落标题 '~'".format(rel, lineno))
+                    elif sec in sections:
+                        self.err("{}:{}: 重复段落标题 '{}'".format(rel, lineno, sec))
+                    else:
+                        sections.add(sec)
+                elif stripped.startswith("=>"):
+                    target = stripped[2:].strip()
+                    jumps.append((lineno, target))
+                elif stripped.startswith("- ") and "=>" in stripped:
+                    target = stripped.rsplit("=>", 1)[1].strip()
+                    jumps.append((lineno, target))
+
+            if not sections:
+                self.err("{}: 至少需要定义一个 '~ section' 段落".format(rel))
+                continue
+
+            for lineno, target in jumps:
+                if target not in sections and target not in special_targets:
+                    self.err("{}:{}: 跳转目标 '{}' 未在当前剧本中定义".format(rel, lineno, target))
+
+            if df.stem in REQUIRED_CORE_HEROINES:
+                missing_secs = required_heroine_sections - sections
+                if missing_secs:
+                    self.err("{}: 核心 AI 娘剧本缺少必需段落: {}".format(rel, ", ".join(sorted(missing_secs))))
+
+        missing_heroine_files = REQUIRED_CORE_HEROINES - found_stems
+        if missing_heroine_files:
+            self.err("dialogue/ 缺少核心 AI 娘剧本文件: {}".format(
+                ", ".join("{}.dialogue".format(cid) for cid in sorted(missing_heroine_files))
+            ))
+
+        self.ok("对话剧本校验完成：.dialogue 文件 {} 个（7 位核心 AI 娘剧本完整）".format(len(dialogue_files)))
+
     # ---------------------------------------------------------------- 4. Godot 无头检查
 
     def find_godot_binary(self, override: Optional[str]) -> Optional[str]:
@@ -925,6 +998,7 @@ def main() -> int:
     validator.check_structure_and_project()
     validator.check_all_json()
     gd_files = validator.check_scripts_and_scenes_static()
+    validator.check_dialogue_files()
     validator.check_godot_headless(gd_files, args.godot, args.require_godot)
 
     print("")

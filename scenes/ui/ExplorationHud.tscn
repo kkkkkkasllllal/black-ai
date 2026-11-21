@@ -116,7 +116,7 @@ theme_override_constants/margin_bottom = 6
 
 [node name="HintLabel" type="Label" parent="HintsPanel/Margin"]
 layout_mode = 2
-text = "WASD 移动 | 鼠标 提灯 | F 调暗 | E 电源/背面开关交互 | 左键/Space 清理暗影怪 | 1/2/3 调上下文 | Esc 菜单"
+text = "WASD 移动 | 鼠标 提灯 | F 调暗 | E 对话/电源交互 | Tab 好感度面板 | 左键/Space 清怪 | 1/2/3 上下文 | Esc 菜单"
 
 [node name="PauseOverlay" type="ColorRect" parent="."]
 visible = false
@@ -159,6 +159,10 @@ horizontal_alignment = 1
 layout_mode = 2
 text = "继续探索（Esc）"
 
+[node name="OpenAffectionButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
+layout_mode = 2
+text = "打开全员好感度与送礼面板（Tab）"
+
 [node name="ToggleContextButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
 layout_mode = 2
 text = "调试：一键切换上下文溢出（15% / 80%）"
@@ -167,16 +171,22 @@ text = "调试：一键切换上下文溢出（15% / 80%）"
 layout_mode = 2
 text = "调试：发放 M3 测试碎片(+50)与示例装备"
 
+[node name="GrantM4GpuButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
+layout_mode = 2
+text = "调试：发放 M4 全套 6 档测试显卡"
+
 [node name="ToggleHeroineKillButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
 layout_mode = 2
-text = "调试：切换核心角色击杀态（测 PSU 红灯报警）"
+text = "调试：切换大肥鱼击杀态（测 PSU 红灯报警）"
 
 [node name="ReturnBootButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
 layout_mode = 2
 text = "返回 M1 自检面板"
 
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ResumeButton" to="." method="_on_resume_button_pressed"]
+[connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/OpenAffectionButton" to="." method="_on_open_affection_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ToggleContextButton" to="." method="_on_toggle_context_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/GrantM3KitButton" to="." method="_on_grant_m3_kit_button_pressed"]
+[connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/GrantM4GpuButton" to="." method="_on_grant_m4_gpu_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ToggleHeroineKillButton" to="." method="_on_toggle_heroine_kill_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ReturnBootButton" to="." method="_on_return_boot_button_pressed"]

@@ -1,16 +1,17 @@
 extends Node2D
-## M2 + M3：2D 上帝视角探索原型与【巨型大 PSU 电源】据点圣坛
+## M2 + M3 + M4：2D 上帝视角探索原型、巨型大 PSU 据点与 7 位核心 AI 娘对话送礼
 ## 核心结构：
 ## - FloorLayer / BloodGraffitiLayer / WallLayer (TileMapLayer)
-## - GiantPsu: 广场中央两层楼高大 PSU 电源（暖橘/红灯报警、正面交互菜单、背面 I/O 总开关 3 连按彩蛋）
+## - GiantPsu: 广场中央巨型大 PSU 电源（暖橘/红灯报警、正面交互菜单、背面 I/O 总开关 3 连按彩蛋）
+## - Npcs: 7 位核心 AI 娘纯色占位实体（大肥鱼 / 小肥鱼 / 真小 C / 假小 C / 大龙娘 / 小龙娘 / Gemini 猫猫）
 ## - Enemies: 4 只 M3 测试暗影怪占位（挥砍清理掉碎片，PSU【清理缓存】后立刻刷新）
-## - Obstacles: 四角带显式 LightOccluder2D 的机柜柱
-## - PsuMenu / PowerOffEasterEgg / ExplorationHud / Player
+## - DialogueBox / GiftAffectionPanel / PsuMenu / PowerOffEasterEgg / ExplorationHud / Player
 
 const MAP_WIDTH: int = 32
 const MAP_HEIGHT: int = 20
 const BOOT_SCENE_PATH: String = "res://scenes/boot/Boot.tscn"
 const SHADOW_ENEMY_SCENE: PackedScene = preload("res://scenes/world/ShadowEnemyPlaceholder.tscn")
+const NPC_PLACEHOLDER_SCENE: PackedScene = preload("res://scenes/world/NpcPlaceholder.tscn")
 
 const AMBIENT_STABLE: Color = Color(0.15, 0.16, 0.20, 1.0)
 const AMBIENT_OVERFLOW: Color = Color(0.19, 0.08, 0.10, 1.0)
@@ -20,11 +21,14 @@ const AMBIENT_OVERFLOW: Color = Color(0.19, 0.08, 0.10, 1.0)
 @onready var wall_layer: TileMapLayer = $WallLayer
 @onready var obstacles_root: Node2D = $Obstacles
 @onready var enemies_root: Node2D = $Enemies
+@onready var npcs_root: Node2D = $Npcs
 @onready var giant_psu: StaticBody2D = $GiantPsu
 @onready var canvas_modulate: CanvasModulate = $CanvasModulate
 @onready var player: CharacterBody2D = $Player
 @onready var hud: CanvasLayer = $ExplorationHud
 @onready var psu_menu: CanvasLayer = $PsuMenu
+@onready var dialogue_box: CanvasLayer = $DialogueBox
+@onready var gift_panel: CanvasLayer = $GiftAffectionPanel
 @onready var power_off_egg: CanvasLayer = $PowerOffEasterEgg
 
 var _tile_size: int = 48
@@ -34,6 +38,9 @@ var _kill_context_cost: int = 8
 var _blood_alpha: float = 0.0
 var _pulse_time: float = 0.0
 var _enemies: Array = []
+var _npcs: Array = []
+var _nearby_npcs: Array = []
+var _psu_prompt_text: String = ""
 
 
 func _ready() -> void:
@@ -47,9 +54,11 @@ func _ready() -> void:
 	_build_server_pillars()
 	_place_giant_psu()
 	_spawn_shadow_enemies()
+	_spawn_core_heroine_npcs()
 	_place_player()
 
 	GameState.context_changed.connect(_on_context_changed)
+	GameState.affection_changed.connect(_on_affection_changed)
 	GameState.world_enemies_respawn_requested.connect(_on_world_enemies_respawn_requested)
 	GameState.save_loaded.connect(_on_save_loaded)
 
@@ -59,19 +68,26 @@ func _ready() -> void:
 	giant_psu.connect("front_interacted", _on_psu_front_interacted)
 	giant_psu.connect("back_switch_step", _on_psu_back_switch_step)
 	giant_psu.connect("power_off_easter_egg_triggered", _on_psu_power_off_easter_egg)
-	giant_psu.connect("interact_prompt_changed", _on_interact_prompt_changed)
+	giant_psu.connect("interact_prompt_changed", _on_psu_prompt_changed)
 
 	hud.connect("pause_toggled", _on_hud_pause_toggled)
 	hud.connect("toggle_context_debug_requested", _toggle_context_overflow_debug)
 	hud.connect("grant_m3_debug_kit_requested", _on_grant_m3_debug_kit)
+	hud.connect("grant_m4_gpu_kit_requested", _on_grant_m4_gpu_kit)
+	hud.connect("open_affection_panel_requested", _on_open_affection_overview_requested)
 	hud.connect("toggle_heroine_kill_debug_requested", _on_toggle_heroine_kill_debug)
 	hud.connect("return_to_boot_requested", _return_to_boot)
 
-	psu_menu.connect("opened", _on_psu_menu_opened)
+	psu_menu.connect("opened", _on_modal_state_changed)
 	psu_menu.connect("closed", _on_psu_menu_closed)
+	dialogue_box.connect("opened", _on_dialogue_opened)
+	dialogue_box.connect("closed", _on_dialogue_closed)
+	dialogue_box.connect("open_gift_requested", _on_dialogue_open_gift_requested)
+	gift_panel.connect("opened", _on_modal_state_changed)
+	gift_panel.connect("closed", _on_gift_panel_closed)
 	power_off_egg.connect("finished", _on_power_off_egg_finished)
 
-	hud.call("set_region_title", "巨型电源圣坛 · 据点原型（M3）")
+	hud.call("set_region_title", "巨型电源圣坛 · 对话与送礼原型（M4）")
 	hud.call("set_lantern_dim", bool(player.call("is_lantern_dim")))
 
 	var revealed: bool = _should_reveal_blood_graffiti()
@@ -102,11 +118,23 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_any_modal_active():
 		return
+
+	if event.is_action_pressed("interact"):
+		if _psu_prompt_text.is_empty():
+			var npc: Node2D = _get_closest_nearby_npc()
+			if npc != null:
+				_start_npc_dialogue(npc)
+				get_viewport().set_input_as_handled()
+				return
+
 	if event is InputEventKey:
 		var key_event: InputEventKey = event
 		if not key_event.pressed or key_event.echo:
 			return
 		match key_event.keycode:
+			KEY_TAB:
+				gift_panel.call("open_affection_overview")
+				get_viewport().set_input_as_handled()
 			KEY_1, KEY_BRACKETLEFT:
 				GameState.change_context(-_debug_context_step)
 				hud.call("show_notice", "调试：上下文 -%d%%（当前 %d%%）" % [_debug_context_step, GameState.context])
@@ -134,14 +162,12 @@ func _build_tilemaps() -> void:
 	wall_layer.clear()
 	blood_graffiti_layer.clear()
 
-	# 1. 地面铺设（黑曜石主板地板 + 从大 PSU 向四周蔓延的供电铜线）
 	for y in range(MAP_HEIGHT):
 		for x in range(MAP_WIDTH):
 			var is_trace: bool = (x == 16 and y >= 2 and y <= 17) or (y == 9 and x >= 2 and x <= 29)
 			var floor_tile: Vector2i = PlaceholderFactory.TILE_FLOOR_TRACE if is_trace else PlaceholderFactory.TILE_FLOOR_DARK
 			floor_layer.set_cell(Vector2i(x, y), 0, floor_tile)
 
-	# 2. 外围封闭墙体
 	for x in range(MAP_WIDTH):
 		_set_wall(x, 0, x % 4 == 0)
 		_set_wall(x, MAP_HEIGHT - 1, x % 4 == 0)
@@ -149,7 +175,6 @@ func _build_tilemaps() -> void:
 		_set_wall(0, y, y % 4 == 0)
 		_set_wall(MAP_WIDTH - 1, y, y % 4 == 0)
 
-	# 3. 内部隔断墙（暗室、拐角暗廊与掩体墙）
 	for x in range(1, 9):
 		if x != 4 and x != 5:
 			_set_wall(x, 7, false)
@@ -174,7 +199,6 @@ func _build_tilemaps() -> void:
 	_set_wall(27, 15, false)
 	_set_wall(27, 16, false)
 
-	# 4. 上下文溢出隐藏血字 TileMapLayer（环绕大 PSU 四周与暗廊，避开电源底座）
 	var graffiti_spots: Array = [
 		[Vector2i(13, 9), PlaceholderFactory.BLOOD_TILE_404],
 		[Vector2i(19, 9), PlaceholderFactory.BLOOD_TILE_580],
@@ -267,10 +291,10 @@ func _place_giant_psu() -> void:
 
 func _spawn_shadow_enemies() -> void:
 	var spawn_specs: Array = [
-		["glitch_ghost", Vector2i(12, 10)],
-		["crawler_404", Vector2i(20, 10)],
-		["slag_golem", Vector2i(6, 4)],
-		["echo_nun", Vector2i(25, 10)],
+		["glitch_ghost", Vector2i(10, 9)],
+		["crawler_404", Vector2i(20, 9)],
+		["slag_golem", Vector2i(5, 4)],
+		["echo_nun", Vector2i(26, 3)],
 	]
 	_enemies.clear()
 	for spec_variant in spawn_specs:
@@ -287,10 +311,115 @@ func _spawn_shadow_enemies() -> void:
 		_enemies.append(enemy_node)
 
 
+## 在圣坛四周生成全部 7 位核心可攻略 AI 娘纯色占位 NPC（互不重叠，便于 M4 试玩验收）。
+func _spawn_core_heroine_npcs() -> void:
+	var npc_specs: Array = [
+		["big_fish", Vector2i(13, 12)],
+		["small_fish", Vector2i(19, 12)],
+		["true_c", Vector2i(6, 9)],
+		["fake_c", Vector2i(6, 12)],
+		["astra", Vector2i(13, 5)],
+		["sol", Vector2i(19, 5)],
+		["gemini_cat", Vector2i(25, 9)],
+	]
+	_npcs.clear()
+	_nearby_npcs.clear()
+	for spec_variant in npc_specs:
+		if not (spec_variant is Array):
+			continue
+		var spec: Array = spec_variant
+		if spec.size() < 2 or not (spec[1] is Vector2i):
+			continue
+		var cid: String = str(spec[0])
+		var cell: Vector2i = spec[1] as Vector2i
+		var npc_node: StaticBody2D = NPC_PLACEHOLDER_SCENE.instantiate() as StaticBody2D
+		npcs_root.add_child(npc_node)
+		npc_node.call("setup", cid, floor_layer.map_to_local(cell))
+		npc_node.connect("player_proximity_changed", _on_npc_proximity_changed)
+		_npcs.append(npc_node)
+
+
 func _place_player() -> void:
 	player.position = floor_layer.map_to_local(Vector2i(16, 12))
 	var world_bounds: Rect2i = Rect2i(0, 0, MAP_WIDTH * _tile_size, MAP_HEIGHT * _tile_size)
 	player.call("set_camera_limits", world_bounds)
+
+
+# ---------------------------------------------------------------- NPC 对话、送显卡与交互仲裁
+
+func _on_npc_proximity_changed(npc_node: Node2D, in_range: bool) -> void:
+	if in_range:
+		if not _nearby_npcs.has(npc_node):
+			_nearby_npcs.append(npc_node)
+	else:
+		_nearby_npcs.erase(npc_node)
+	_refresh_active_interact_prompt()
+
+
+func _on_psu_prompt_changed(prompt_text: String) -> void:
+	_psu_prompt_text = prompt_text
+	_refresh_active_interact_prompt()
+
+
+func _get_closest_nearby_npc() -> Node2D:
+	var best: Node2D = null
+	var best_dist_sq: float = INF
+	for npc_variant in _nearby_npcs:
+		var npc: Node2D = npc_variant as Node2D
+		if npc == null or not bool(npc.call("is_alive")):
+			continue
+		var d2: float = player.global_position.distance_squared_to(npc.global_position)
+		if d2 < best_dist_sq:
+			best_dist_sq = d2
+			best = npc
+	return best
+
+
+func _refresh_active_interact_prompt() -> void:
+	if _is_any_modal_active():
+		hud.call("set_interact_prompt", "")
+		return
+	if not _psu_prompt_text.is_empty():
+		hud.call("set_interact_prompt", _psu_prompt_text)
+		return
+	var npc: Node2D = _get_closest_nearby_npc()
+	if npc != null:
+		hud.call("set_interact_prompt", str(npc.call("get_interact_prompt")))
+	else:
+		hud.call("set_interact_prompt", "")
+
+
+func _start_npc_dialogue(npc_node: Node2D) -> void:
+	var cid: String = str(npc_node.call("get_character_id"))
+	var path: String = str(npc_node.call("get_dialogue_path"))
+	dialogue_box.call("open_dialogue", cid, path, "start")
+
+
+func _on_dialogue_opened(_character_id: String) -> void:
+	_sync_input_locks()
+
+
+func _on_dialogue_closed(_character_id: String) -> void:
+	_sync_input_locks()
+	_refresh_active_interact_prompt()
+
+
+func _on_dialogue_open_gift_requested(character_id: String) -> void:
+	dialogue_box.call("set_input_suspended", true)
+	gift_panel.call("open_for_gift", character_id)
+	_sync_input_locks()
+
+
+func _on_gift_panel_closed(last_reaction: String, _target_character_id: String) -> void:
+	if bool(dialogue_box.call("is_open")):
+		dialogue_box.call("set_input_suspended", false)
+		dialogue_box.call("play_reaction_section", last_reaction)
+	_sync_input_locks()
+	_refresh_active_interact_prompt()
+
+
+func _on_open_affection_overview_requested() -> void:
+	gift_panel.call("open_affection_overview")
 
 
 # ---------------------------------------------------------------- 暗影怪清理与缓存刷新
@@ -306,7 +435,6 @@ func _on_player_attack_performed(origin: Vector2, aim_dir: Vector2) -> void:
 		var dist: float = to_enemy.length()
 		if dist > _melee_range:
 			continue
-		# 近身 42px 内全向命中；42..78px 需大致朝向目标
 		if dist > 42.0 and aim_dir.dot(to_enemy.normalized()) < 0.15:
 			continue
 		var reward_variant: Variant = enemy_node.call("kill_placeholder")
@@ -365,7 +493,7 @@ func _count_alive_enemies() -> int:
 	return count
 
 
-# ---------------------------------------------------------------- 大 PSU 交互、背面开关彩蛋与模态锁
+# ---------------------------------------------------------------- 大 PSU 交互、彩蛋与模态锁
 
 func _on_psu_front_interacted() -> void:
 	if _is_any_modal_active():
@@ -390,37 +518,44 @@ func _on_power_off_egg_finished(first_unlock: bool) -> void:
 	giant_psu.call("set_power_cut", false)
 	_sync_input_locks()
 	giant_psu.call("refresh_prompt")
+	_refresh_active_interact_prompt()
 	var suffix: String = "（首次解锁《手贱的代价》！）" if first_unlock else "（《手贱的代价》已收录）"
 	hud.call("show_notice", "大 PSU 电源重新通电——别再乱按背面红色总开关了！%s" % suffix, 4.0)
 
 
-func _on_psu_menu_opened() -> void:
+func _on_modal_state_changed() -> void:
 	_sync_input_locks()
 
 
 func _on_psu_menu_closed() -> void:
 	_sync_input_locks()
 	giant_psu.call("refresh_prompt")
-
-
-func _on_interact_prompt_changed(prompt_text: String) -> void:
-	hud.call("set_interact_prompt", prompt_text)
+	_refresh_active_interact_prompt()
 
 
 func _is_any_modal_active() -> bool:
 	return (
 		bool(hud.call("is_paused"))
 		or bool(psu_menu.call("is_open"))
+		or bool(dialogue_box.call("is_open"))
+		or bool(gift_panel.call("is_open"))
 		or bool(power_off_egg.call("is_playing"))
 	)
 
 
 func _sync_input_locks() -> void:
-	var menu_or_egg: bool = bool(psu_menu.call("is_open")) or bool(power_off_egg.call("is_playing"))
-	var any_modal: bool = menu_or_egg or bool(hud.call("is_paused"))
+	var non_pause_modal: bool = (
+		bool(psu_menu.call("is_open"))
+		or bool(dialogue_box.call("is_open"))
+		or bool(gift_panel.call("is_open"))
+		or bool(power_off_egg.call("is_playing"))
+	)
+	var any_modal: bool = non_pause_modal or bool(hud.call("is_paused"))
 	player.call("set_movement_enabled", not any_modal)
 	giant_psu.call("set_interaction_enabled", not any_modal)
-	hud.call("set_input_locked", menu_or_egg)
+	hud.call("set_input_locked", non_pause_modal)
+	if any_modal:
+		hud.call("set_interact_prompt", "")
 
 
 # ---------------------------------------------------------------- 上下文、调试与状态回调
@@ -433,10 +568,10 @@ func _toggle_context_overflow_debug() -> void:
 	if GameState.is_context_overflow():
 		var safe_target: int = DataRegistry.get_config_int("context.psu_restore_to", 80)
 		GameState.set_context(safe_target)
-		hud.call("show_notice", "上下文恢复至 %d%% — 表世界稳定，大 PSU 恢复暖橘运行" % safe_target)
+		hud.call("show_notice", "上下文恢复至 %d%% — 表世界稳定，大 PSU 与 AI 娘恢复表世界状态" % safe_target)
 	else:
 		GameState.set_context(15)
-		hud.call("show_notice", "上下文降至 15% — 里世界溢出！大 PSU 亮起红灯报警并爆出电火花")
+		hud.call("show_notice", "上下文降至 15% — 里世界溢出！血字显现，AI 娘切换里世界台词")
 
 
 func _on_grant_m3_debug_kit() -> void:
@@ -447,27 +582,48 @@ func _on_grant_m3_debug_kit() -> void:
 	GameState.add_item("prompt_catgirl", 1)
 	GameState.add_item("thermal_paste", 2)
 	GameState.add_item("black_tape", 2)
-	hud.call("show_notice", "调试补给已发放：碎片 +50，内存条刀 / 廉政机箱 / 双塔风冷 / 猫娘提示词 / 硅脂 / 黑胶带", 4.0)
+	hud.call("show_notice", "M3 调试补给已发放：碎片 +50 与四槽示例装备、消耗品", 3.6)
+
+
+func _on_grant_m4_gpu_kit() -> void:
+	GameState.add_item("gpu_580", 5)
+	GameState.add_item("gpu_10600", 3)
+	GameState.add_item("gpu_20600", 3)
+	GameState.add_item("gpu_50900", 4)
+	GameState.add_item("gpu_huawei", 4)
+	GameState.add_item("gpu_600900", 1)
+	hud.call("show_notice", "M4 测试显卡已发放：580 ×5 / 10600 ×3 / 20600 ×3 / 50900 ×4 / 华为 ×4 / 600900 ×1", 4.2)
 
 
 func _on_toggle_heroine_kill_debug() -> void:
 	if GameState.is_character_alive("big_fish"):
 		GameState.kill_character("big_fish")
-		hud.call("show_notice", "调试：已标记击杀大肥鱼 → 大 PSU 触发红灯报警与电火花！", 3.4)
+		hud.call("show_notice", "调试：已标记击杀大肥鱼 → 大 PSU 红灯报警并爆电火花！", 3.4)
 	else:
 		GameState.revive_character("big_fish")
+		for npc_variant in _npcs:
+			var npc: Node2D = npc_variant as Node2D
+			if npc != null:
+				npc.call("refresh_visual_state")
 		hud.call("show_notice", "调试：已恢复大肥鱼当前局存活状态。", 3.0)
 	giant_psu.call("refresh_prompt")
+	_refresh_active_interact_prompt()
 
 
 func _on_save_loaded(_slot: int) -> void:
 	giant_psu.call("refresh_prompt")
+	_refresh_active_interact_prompt()
+
+
+func _on_affection_changed(_cid: String, _old_val: int, _new_val: int, _tier_id: String) -> void:
+	_refresh_active_interact_prompt()
 
 
 func _on_context_changed(current: int, _maximum: int, is_overflow: bool) -> void:
 	giant_psu.call("refresh_prompt")
+	_refresh_active_interact_prompt()
 	if is_overflow:
-		hud.call("show_notice", "警告：上下文溢出（%d%%），大 PSU 红灯报警、血字浮现！" % current)
+		hud.call("show_notice", "警告：上下文溢出（%d%%），大 PSU 红灯报警、AI 娘切入里世界态！" % current)
 
 
 func _on_lantern_mode_changed(is_dim: bool) -> void:
@@ -477,6 +633,7 @@ func _on_lantern_mode_changed(is_dim: bool) -> void:
 
 func _on_hud_pause_toggled(_is_paused: bool) -> void:
 	_sync_input_locks()
+	_refresh_active_interact_prompt()
 
 
 func _return_to_boot() -> void:
