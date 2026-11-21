@@ -12,7 +12,7 @@ const EXPLORE_PROTOTYPE_SCENE: String = "res://scenes/world/ExplorePrototype.tsc
 func _ready() -> void:
 	_refresh_summary()
 	enter_explore_button.grab_focus()
-	_append_log("自检就绪。点击「进入探索原型（M2–M4 圣坛·对话·送显卡）」（或按 Enter）开始试玩。")
+	_append_log("自检就绪。点击「进入探索与战斗原型（M2–M5）」（或按 Enter）开始试玩。")
 
 
 func _refresh_summary() -> void:

@@ -313,7 +313,7 @@ class Validator:
             if loaded is not None:
                 parsed[jf.name] = loaded
 
-        required_files = ["config.json", "items.json", "characters.json", "monsters.json", "endings.json"]
+        required_files = ["config.json", "items.json", "characters.json", "monsters.json", "endings.json", "skills.json"]
         for req in required_files:
             if req not in parsed:
                 self.err("data/ 缺少核心数据文件: {}".format(req))
@@ -325,19 +325,22 @@ class Validator:
         characters = parsed["characters.json"]
         monsters = parsed["monsters.json"]
         endings = parsed["endings.json"]
+        skills = parsed["skills.json"]
 
         region_ids, status_ids = self._validate_config(config)
         char_ids = self._validate_characters(characters, region_ids)
         item_ids, item_category_map = self._validate_items(items, char_ids, status_ids)
-        self._validate_monsters(monsters, region_ids, item_ids, status_ids)
+        player_skill_ids, enemy_skill_ids = self._validate_skills(skills, status_ids, item_ids)
+        self._validate_monsters(monsters, region_ids, item_ids, status_ids, enemy_skill_ids)
         self._validate_endings(endings)
         self._validate_config_item_refs(config, item_ids, item_category_map)
 
-        self.ok("JSON 数据校验完成：{} 个数据文件，物品 {} / 角色 {} / 怪物 {} / 结局 {}".format(
+        self.ok("JSON 数据校验完成：{} 个数据文件，物品 {} / 角色 {} / 怪物 {} / 技能 {} / 结局 {}".format(
             len(parsed),
             len(item_ids),
             len(char_ids),
             len(monsters.get("monsters", [])),
+            len(player_skill_ids) + len(enemy_skill_ids),
             len(endings.get("endings", [])),
         ))
 
@@ -666,12 +669,76 @@ class Validator:
                 if target not in char_ids:
                     self.err("{}[{}] target 引用了未知角色: {!r}".format(loc, idx, target))
 
+    def _validate_skills(
+        self,
+        data: Dict[str, Any],
+        status_ids: Set[str],
+        item_ids: Set[str],
+    ) -> Tuple[Set[str], Set[str]]:
+        player_ids: Set[str] = set()
+        enemy_ids: Set[str] = set()
+
+        pskills = data.get("player_skills")
+        if not isinstance(pskills, list) or not pskills:
+            self.err("skills.json 缺少非空 player_skills 数组")
+        else:
+            for idx, sk in enumerate(pskills):
+                loc = "skills.json player_skills[{}]".format(idx)
+                if not isinstance(sk, dict):
+                    self.err("{} 必须为对象".format(loc))
+                    continue
+                sid = sk.get("id")
+                if not isinstance(sid, str) or not SNAKE_CASE_RE.match(sid):
+                    self.err("{} id 非法: {!r}".format(loc, sid))
+                    continue
+                if sid in player_ids:
+                    self.err("{} id 重复: {}".format(loc, sid))
+                    continue
+                player_ids.add(sid)
+                for req_str in ["name", "full_line", "truncated_line"]:
+                    if not isinstance(sk.get(req_str), str) or not sk[req_str].strip():
+                        self.err("{} ({}) 缺少 {}".format(loc, sid, req_str))
+                if not isinstance(sk.get("token_cost"), int) or sk["token_cost"] < 1:
+                    self.err("{} ({}) token_cost 必须为正整数".format(loc, sid))
+                apply_st = sk.get("apply_status")
+                if apply_st and apply_st not in status_ids:
+                    self.err("{} ({}) apply_status 引用未定义状态: {!r}".format(loc, sid, apply_st))
+
+        eskills = data.get("enemy_skills")
+        if not isinstance(eskills, list) or not eskills:
+            self.err("skills.json 缺少非空 enemy_skills 数组")
+        else:
+            for idx, sk in enumerate(eskills):
+                loc = "skills.json enemy_skills[{}]".format(idx)
+                if not isinstance(sk, dict):
+                    self.err("{} 必须为对象".format(loc))
+                    continue
+                sid = sk.get("id")
+                if not isinstance(sid, str) or not SNAKE_CASE_RE.match(sid):
+                    self.err("{} id 非法: {!r}".format(loc, sid))
+                    continue
+                if sid in enemy_ids:
+                    self.err("{} id 重复: {}".format(loc, sid))
+                    continue
+                enemy_ids.add(sid)
+                if not isinstance(sk.get("name"), str) or not sk["name"].strip():
+                    self.err("{} ({}) 缺少 name".format(loc, sid))
+                apply_st = sk.get("apply_status")
+                if apply_st and apply_st not in status_ids:
+                    self.err("{} ({}) apply_status 引用未定义状态: {!r}".format(loc, sid, apply_st))
+                steal_item = sk.get("steal_item_id")
+                if steal_item and steal_item not in item_ids:
+                    self.err("{} ({}) steal_item_id 引用未知物品: {!r}".format(loc, sid, steal_item))
+
+        return player_ids, enemy_ids
+
     def _validate_monsters(
         self,
         data: Dict[str, Any],
         region_ids: Set[str],
         item_ids: Set[str],
         status_ids: Set[str],
+        enemy_skill_ids: Set[str],
     ) -> None:
         entries = data.get("monsters")
         if not isinstance(entries, list) or not entries:
@@ -711,6 +778,10 @@ class Validator:
                 for k in ["hp", "atk", "def", "spd"]:
                     if not isinstance(stats.get(k), (int, float)):
                         self.err("{} ({}) stats.{} 缺失或非数字".format(loc, mid, k))
+
+            for sk_id in mon.get("skills", []):
+                if sk_id not in enemy_skill_ids:
+                    self.err("{} ({}) skills 引用了未定义怪物技能: {!r}".format(loc, mid, sk_id))
 
             for weak in mon.get("weaknesses", []):
                 if weak not in item_ids and weak not in status_ids:

@@ -1,9 +1,12 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/world/ShadowEnemyPlaceholder.gd" id="1_enemy"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_enemy"]
 radius = 16.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_encounter"]
+radius = 27.0
 
 [node name="ShadowEnemyPlaceholder" type="StaticBody2D"]
 z_index = 3
@@ -11,6 +14,11 @@ script = ExtResource("1_enemy")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_enemy")
+
+[node name="EncounterZone" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="EncounterZone"]
+shape = SubResource("CircleShape2D_encounter")
 
 [node name="Visual" type="Node2D" parent="."]
 
@@ -47,9 +55,9 @@ mouse_filter = 2
 color = Color(1, 0.18, 0.2, 1)
 
 [node name="NameLabel" type="Label" parent="Visual"]
-offset_left = -74.0
-offset_top = -40.0
-offset_right = 74.0
-offset_bottom = -20.0
+offset_left = -86.0
+offset_top = -42.0
+offset_right = 86.0
+offset_bottom = -22.0
 text = "1-bit 乱码游魂"
 horizontal_alignment = 1

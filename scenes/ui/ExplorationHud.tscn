@@ -116,7 +116,7 @@ theme_override_constants/margin_bottom = 6
 
 [node name="HintLabel" type="Label" parent="HintsPanel/Margin"]
 layout_mode = 2
-text = "WASD 移动 | 鼠标 提灯 | F 调暗 | E 对话/电源交互 | Tab 好感度面板 | 左键/Space 清怪 | 1/2/3 上下文 | Esc 菜单"
+text = "WASD 移动 | 鼠标 提灯 | F 调暗 | E 交互 | Tab 好感 | 碰怪/左键先手开战 | 1/2/3 上下文 | Esc 菜单"
 
 [node name="PauseOverlay" type="ColorRect" parent="."]
 visible = false
@@ -175,6 +175,14 @@ text = "调试：发放 M3 测试碎片(+50)与示例装备"
 layout_mode = 2
 text = "调试：发放 M4 全套 6 档测试显卡"
 
+[node name="GrantM5KitButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
+layout_mode = 2
+text = "调试：发放 M5 全套战斗武器/机箱/散热/消耗品"
+
+[node name="DrainTokenButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
+layout_mode = 2
+text = "调试：将 Token 降至 10（速测输出截断）"
+
 [node name="ToggleHeroineKillButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
 layout_mode = 2
 text = "调试：切换大肥鱼击杀态（测 PSU 红灯报警）"
@@ -188,5 +196,7 @@ text = "返回 M1 自检面板"
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ToggleContextButton" to="." method="_on_toggle_context_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/GrantM3KitButton" to="." method="_on_grant_m3_kit_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/GrantM4GpuButton" to="." method="_on_grant_m4_gpu_button_pressed"]
+[connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/GrantM5KitButton" to="." method="_on_grant_m5_kit_button_pressed"]
+[connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/DrainTokenButton" to="." method="_on_drain_token_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ToggleHeroineKillButton" to="." method="_on_toggle_heroine_kill_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ReturnBootButton" to="." method="_on_return_boot_button_pressed"]

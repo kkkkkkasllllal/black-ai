@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scenes/world/ExplorePrototype.gd" id="1_explore"]
 [ext_resource type="PackedScene" path="res://scenes/world/Player.tscn" id="2_player"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/PowerOffEasterEgg.tscn" id="6_egg"]
 [ext_resource type="PackedScene" path="res://scenes/ui/DialogueBox.tscn" id="7_dlg"]
 [ext_resource type="PackedScene" path="res://scenes/ui/GiftAffectionPanel.tscn" id="8_gift"]
+[ext_resource type="PackedScene" path="res://scenes/battle/BattleOverlay.tscn" id="9_battle"]
 
 [node name="ExplorePrototype" type="Node2D"]
 script = ExtResource("1_explore")
@@ -42,5 +43,7 @@ color = Color(0.15, 0.16, 0.2, 1)
 [node name="DialogueBox" parent="." instance=ExtResource("7_dlg")]
 
 [node name="GiftAffectionPanel" parent="." instance=ExtResource("8_gift")]
+
+[node name="BattleOverlay" parent="." instance=ExtResource("9_battle")]
 
 [node name="PowerOffEasterEgg" parent="." instance=ExtResource("6_egg")]

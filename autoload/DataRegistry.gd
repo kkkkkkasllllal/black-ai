@@ -22,6 +22,10 @@ var _monsters: Dictionary = {}
 var _monster_order: PackedStringArray = PackedStringArray()
 var _endings: Dictionary = {}
 var _ending_order: PackedStringArray = PackedStringArray()
+var _player_skills: Dictionary = {}
+var _player_skill_order: PackedStringArray = PackedStringArray()
+var _enemy_skills: Dictionary = {}
+var _enemy_skill_order: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
@@ -39,6 +43,10 @@ func reload() -> void:
 	_monster_order.clear()
 	_endings.clear()
 	_ending_order.clear()
+	_player_skills.clear()
+	_player_skill_order.clear()
+	_enemy_skills.clear()
+	_enemy_skill_order.clear()
 
 	config = _load_json("config.json")
 
@@ -60,11 +68,14 @@ func reload() -> void:
 	_character_order = _index_list(_load_json("characters.json"), "characters", _characters)
 	_monster_order = _index_list(_load_json("monsters.json"), "monsters", _monsters)
 	_ending_order = _index_list(_load_json("endings.json"), "endings", _endings)
+	var skills_root: Dictionary = _load_json("skills.json")
+	_player_skill_order = _index_list(skills_root, "player_skills", _player_skills)
+	_enemy_skill_order = _index_list(skills_root, "enemy_skills", _enemy_skills)
 
 	is_loaded = load_errors.is_empty()
 	if is_loaded:
-		print("[DataRegistry] 数据加载完成：物品 %d / 角色 %d / 怪物 %d / 结局 %d" % [
-			_items.size(), _characters.size(), _monsters.size(), _endings.size()])
+		print("[DataRegistry] 数据加载完成：物品 %d / 角色 %d / 怪物 %d / 技能 %d / 结局 %d" % [
+			_items.size(), _characters.size(), _monsters.size(), _player_skills.size() + _enemy_skills.size(), _endings.size()])
 	data_reloaded.emit()
 
 
@@ -179,6 +190,28 @@ func get_ending(ending_id: String) -> Dictionary:
 
 func get_ending_ids() -> PackedStringArray:
 	return _ending_order.duplicate()
+
+
+# ---------------------------------------------------------------- 战斗技能
+
+func get_player_skill(skill_id: String) -> Dictionary:
+	if not _player_skills.has(skill_id):
+		return {}
+	return (_player_skills[skill_id] as Dictionary).duplicate(true)
+
+
+func get_player_skill_ids() -> PackedStringArray:
+	return _player_skill_order.duplicate()
+
+
+func get_enemy_skill(skill_id: String) -> Dictionary:
+	if not _enemy_skills.has(skill_id):
+		return {}
+	return (_enemy_skills[skill_id] as Dictionary).duplicate(true)
+
+
+func get_enemy_skill_ids() -> PackedStringArray:
+	return _enemy_skill_order.duplicate()
 
 
 # ---------------------------------------------------------------- 好感分段

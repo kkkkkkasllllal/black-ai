@@ -1,11 +1,11 @@
 extends Node2D
-## M2 + M3 + M4：2D 上帝视角探索原型、巨型大 PSU 据点与 7 位核心 AI 娘对话送礼
+## M2 – M5 综合探索与战斗原型：巨型大 PSU 据点、7 核心 AI 娘对话送礼、6 种暗影怪回合制战斗
 ## 核心结构：
 ## - FloorLayer / BloodGraffitiLayer / WallLayer (TileMapLayer)
 ## - GiantPsu: 广场中央巨型大 PSU 电源（暖橘/红灯报警、正面交互菜单、背面 I/O 总开关 3 连按彩蛋）
-## - Npcs: 7 位核心 AI 娘纯色占位实体（大肥鱼 / 小肥鱼 / 真小 C / 假小 C / 大龙娘 / 小龙娘 / Gemini 猫猫）
-## - Enemies: 4 只 M3 测试暗影怪占位（挥砍清理掉碎片，PSU【清理缓存】后立刻刷新）
-## - DialogueBox / GiftAffectionPanel / PsuMenu / PowerOffEasterEgg / ExplorationHud / Player
+## - Npcs: 7 位核心 AI 娘纯色占位实体
+## - Enemies: 全部 6 种策划怪物（碰怪遇敌 / 主动挥砍先手切入 BS2 回合制战斗，战后无缝返回地图坐标）
+## - DialogueBox / GiftAffectionPanel / PsuMenu / BattleOverlay / PowerOffEasterEgg / ExplorationHud / Player
 
 const MAP_WIDTH: int = 32
 const MAP_HEIGHT: int = 20
@@ -29,12 +29,12 @@ const AMBIENT_OVERFLOW: Color = Color(0.19, 0.08, 0.10, 1.0)
 @onready var psu_menu: CanvasLayer = $PsuMenu
 @onready var dialogue_box: CanvasLayer = $DialogueBox
 @onready var gift_panel: CanvasLayer = $GiftAffectionPanel
+@onready var battle_overlay: CanvasLayer = $BattleOverlay
 @onready var power_off_egg: CanvasLayer = $PowerOffEasterEgg
 
 var _tile_size: int = 48
 var _debug_context_step: int = 15
 var _melee_range: float = 78.0
-var _kill_context_cost: int = 8
 var _blood_alpha: float = 0.0
 var _pulse_time: float = 0.0
 var _enemies: Array = []
@@ -47,7 +47,6 @@ func _ready() -> void:
 	_tile_size = DataRegistry.get_config_int("exploration.tile_size", 48)
 	_debug_context_step = DataRegistry.get_config_int("exploration.debug_context_step", 15)
 	_melee_range = DataRegistry.get_config_float("psu.melee_attack_range", 78.0)
-	_kill_context_cost = DataRegistry.get_config_int("psu.kill_context_cost", 8)
 
 	GameState.current_region = "psu_altar"
 	_build_tilemaps()
@@ -74,6 +73,8 @@ func _ready() -> void:
 	hud.connect("toggle_context_debug_requested", _toggle_context_overflow_debug)
 	hud.connect("grant_m3_debug_kit_requested", _on_grant_m3_debug_kit)
 	hud.connect("grant_m4_gpu_kit_requested", _on_grant_m4_gpu_kit)
+	hud.connect("grant_m5_battle_kit_requested", _on_grant_m5_battle_kit)
+	hud.connect("drain_token_debug_requested", _on_drain_token_debug)
 	hud.connect("open_affection_panel_requested", _on_open_affection_overview_requested)
 	hud.connect("toggle_heroine_kill_debug_requested", _on_toggle_heroine_kill_debug)
 	hud.connect("return_to_boot_requested", _return_to_boot)
@@ -85,9 +86,11 @@ func _ready() -> void:
 	dialogue_box.connect("open_gift_requested", _on_dialogue_open_gift_requested)
 	gift_panel.connect("opened", _on_modal_state_changed)
 	gift_panel.connect("closed", _on_gift_panel_closed)
+	battle_overlay.connect("battle_started", _on_battle_started)
+	battle_overlay.connect("battle_finished", _on_battle_finished)
 	power_off_egg.connect("finished", _on_power_off_egg_finished)
 
-	hud.call("set_region_title", "巨型电源圣坛 · 对话与送礼原型（M4）")
+	hud.call("set_region_title", "巨型电源圣坛 · 回合制战斗原型（M5）")
 	hud.call("set_lantern_dim", bool(player.call("is_lantern_dim")))
 
 	var revealed: bool = _should_reveal_blood_graffiti()
@@ -289,12 +292,15 @@ func _place_giant_psu() -> void:
 	giant_psu.position = floor_layer.map_to_local(Vector2i(16, 9))
 
 
+## 部署全部 6 种 M5 策划怪物（4 常规怪 + 1 溢出专属未定义黑影 + 1 区域精英缝合蒸馏兽）。
 func _spawn_shadow_enemies() -> void:
 	var spawn_specs: Array = [
 		["glitch_ghost", Vector2i(10, 9)],
 		["crawler_404", Vector2i(20, 9)],
 		["slag_golem", Vector2i(5, 4)],
 		["echo_nun", Vector2i(26, 3)],
+		["undefined_shade", Vector2i(7, 16)],
+		["distill_beast", Vector2i(24, 16)],
 	]
 	_enemies.clear()
 	for spec_variant in spawn_specs:
@@ -308,10 +314,10 @@ func _spawn_shadow_enemies() -> void:
 		var enemy_node: StaticBody2D = SHADOW_ENEMY_SCENE.instantiate() as StaticBody2D
 		enemies_root.add_child(enemy_node)
 		enemy_node.call("setup", monster_id, floor_layer.map_to_local(cell))
+		enemy_node.connect("encounter_triggered", _on_enemy_encounter_triggered)
 		_enemies.append(enemy_node)
 
 
-## 在圣坛四周生成全部 7 位核心可攻略 AI 娘纯色占位 NPC（互不重叠，便于 M4 试玩验收）。
 func _spawn_core_heroine_npcs() -> void:
 	var npc_specs: Array = [
 		["big_fish", Vector2i(13, 12)],
@@ -343,6 +349,94 @@ func _place_player() -> void:
 	player.position = floor_layer.map_to_local(Vector2i(16, 12))
 	var world_bounds: Rect2i = Rect2i(0, 0, MAP_WIDTH * _tile_size, MAP_HEIGHT * _tile_size)
 	player.call("set_camera_limits", world_bounds)
+
+
+# ---------------------------------------------------------------- 探索遇敌 / 主动拔刀切入回合制战斗
+
+func _on_enemy_encounter_triggered(enemy_node: Node2D) -> void:
+	if _is_any_modal_active() or enemy_node == null:
+		return
+	if not bool(enemy_node.call("is_active_in_world")):
+		return
+	var mid: String = str(enemy_node.call("get_monster_id"))
+	battle_overlay.call("start_monster_battle", mid, enemy_node, false)
+
+
+func _on_player_attack_performed(origin: Vector2, aim_dir: Vector2) -> void:
+	if _is_any_modal_active():
+		return
+	var best_enemy: Node2D = null
+	var best_dist: float = INF
+	for enemy_variant in _enemies:
+		var enemy_node: Node2D = enemy_variant as Node2D
+		if enemy_node == null or not bool(enemy_node.call("is_active_in_world")):
+			continue
+		var to_enemy: Vector2 = enemy_node.global_position - origin
+		var dist: float = to_enemy.length()
+		if dist > _melee_range:
+			continue
+		if dist > 42.0 and aim_dir.dot(to_enemy.normalized()) < 0.15:
+			continue
+		if dist < best_dist:
+			best_dist = dist
+			best_enemy = enemy_node
+
+	if best_enemy != null:
+		var mid: String = str(best_enemy.call("get_monster_id"))
+		battle_overlay.call("start_monster_battle", mid, best_enemy, true)
+
+
+func _on_battle_started(_monster_id: String) -> void:
+	_sync_input_locks()
+
+
+func _on_battle_finished(outcome: String, monster_id: String, enemy_world_node: Node2D) -> void:
+	var mname: String = str(DataRegistry.get_monster(monster_id).get("name", monster_id))
+	match outcome:
+		"victory":
+			if enemy_world_node != null:
+				enemy_world_node.call("kill_placeholder")
+			hud.call("show_notice", "战斗胜利！已击败【%s】并无缝返回当前坐标。" % mname, 3.4)
+		"escaped":
+			if enemy_world_node != null:
+				enemy_world_node.call("set_encounter_cooldown", 2.0)
+			hud.call("show_notice", "已脱离与【%s】的战斗，返回原地。" % mname, 2.8)
+		"defeat":
+			var revive_hp: int = maxi(50, int(float(GameState.get_effective_max_hp()) * 0.5))
+			GameState.set_hp(revive_hp)
+			GameState.set_token(GameState.max_token)
+			var safe_ctx: int = DataRegistry.get_config_int("context.psu_restore_to", 80)
+			if GameState.context < safe_ctx:
+				GameState.set_context(safe_ctx)
+			player.position = floor_layer.map_to_local(Vector2i(16, 12))
+			for enemy_variant in _enemies:
+				var en: Node2D = enemy_variant as Node2D
+				if en != null:
+					en.call("set_encounter_cooldown", 1.5)
+			hud.call("show_notice", "战斗败北……你被供电线拖回巨型大 PSU 电源前重新苏醒。", 4.2)
+
+	_sync_input_locks()
+	giant_psu.call("refresh_prompt")
+	_refresh_active_interact_prompt()
+
+
+func _on_world_enemies_respawn_requested(_reason: String) -> void:
+	var respawned: int = 0
+	for enemy_variant in _enemies:
+		var enemy_node: Node2D = enemy_variant as Node2D
+		if enemy_node == null:
+			continue
+		if not bool(enemy_node.call("is_alive")):
+			respawned += 1
+		enemy_node.call("respawn_placeholder")
+	hud.call(
+		"show_notice",
+		"大 PSU 已清理缓存：上下文 %d%%，地图暗影怪已立刻重新生成（复活 %d 只）！" % [
+			GameState.context,
+			respawned,
+		],
+		3.6
+	)
 
 
 # ---------------------------------------------------------------- NPC 对话、送显卡与交互仲裁
@@ -422,77 +516,6 @@ func _on_open_affection_overview_requested() -> void:
 	gift_panel.call("open_affection_overview")
 
 
-# ---------------------------------------------------------------- 暗影怪清理与缓存刷新
-
-func _on_player_attack_performed(origin: Vector2, aim_dir: Vector2) -> void:
-	var hit_names: PackedStringArray = PackedStringArray()
-	var total_shards: int = 0
-	for enemy_variant in _enemies:
-		var enemy_node: Node2D = enemy_variant as Node2D
-		if enemy_node == null or not bool(enemy_node.call("is_alive")):
-			continue
-		var to_enemy: Vector2 = enemy_node.global_position - origin
-		var dist: float = to_enemy.length()
-		if dist > _melee_range:
-			continue
-		if dist > 42.0 and aim_dir.dot(to_enemy.normalized()) < 0.15:
-			continue
-		var reward_variant: Variant = enemy_node.call("kill_placeholder")
-		if reward_variant is Dictionary:
-			var reward: Dictionary = reward_variant
-			var shards: int = int(reward.get("weight_shards", 3))
-			total_shards += shards
-			hit_names.append(str(reward.get("name", "暗影怪")))
-
-	if hit_names.is_empty():
-		return
-
-	GameState.add_weight_shards(total_shards)
-	if _kill_context_cost > 0:
-		GameState.change_context(-_kill_context_cost)
-	var alive_left: int = _count_alive_enemies()
-	hud.call(
-		"show_notice",
-		"清理【%s】！碎片 +%d，上下文 -%d%%（剩余暗影怪 %d/%d）" % [
-			"、".join(hit_names),
-			total_shards,
-			_kill_context_cost,
-			alive_left,
-			_enemies.size(),
-		],
-		3.4
-	)
-
-
-func _on_world_enemies_respawn_requested(_reason: String) -> void:
-	var respawned: int = 0
-	for enemy_variant in _enemies:
-		var enemy_node: Node2D = enemy_variant as Node2D
-		if enemy_node == null:
-			continue
-		if not bool(enemy_node.call("is_alive")):
-			respawned += 1
-		enemy_node.call("respawn_placeholder")
-	hud.call(
-		"show_notice",
-		"大 PSU 已清理缓存：上下文 %d%%，地图暗影怪已立刻重新生成（复活 %d 只，共 %d 只）！" % [
-			GameState.context,
-			respawned,
-			_enemies.size(),
-		],
-		3.6
-	)
-
-
-func _count_alive_enemies() -> int:
-	var count: int = 0
-	for enemy_variant in _enemies:
-		var enemy_node: Node2D = enemy_variant as Node2D
-		if enemy_node != null and bool(enemy_node.call("is_alive")):
-			count += 1
-	return count
-
-
 # ---------------------------------------------------------------- 大 PSU 交互、彩蛋与模态锁
 
 func _on_psu_front_interacted() -> void:
@@ -539,6 +562,7 @@ func _is_any_modal_active() -> bool:
 		or bool(psu_menu.call("is_open"))
 		or bool(dialogue_box.call("is_open"))
 		or bool(gift_panel.call("is_open"))
+		or bool(battle_overlay.call("is_open"))
 		or bool(power_off_egg.call("is_playing"))
 	)
 
@@ -548,6 +572,7 @@ func _sync_input_locks() -> void:
 		bool(psu_menu.call("is_open"))
 		or bool(dialogue_box.call("is_open"))
 		or bool(gift_panel.call("is_open"))
+		or bool(battle_overlay.call("is_open"))
 		or bool(power_off_egg.call("is_playing"))
 	)
 	var any_modal: bool = non_pause_modal or bool(hud.call("is_paused"))
@@ -568,10 +593,10 @@ func _toggle_context_overflow_debug() -> void:
 	if GameState.is_context_overflow():
 		var safe_target: int = DataRegistry.get_config_int("context.psu_restore_to", 80)
 		GameState.set_context(safe_target)
-		hud.call("show_notice", "上下文恢复至 %d%% — 表世界稳定，大 PSU 与 AI 娘恢复表世界状态" % safe_target)
+		hud.call("show_notice", "上下文恢复至 %d%% — 表世界稳定，未定义黑影消退" % safe_target)
 	else:
 		GameState.set_context(15)
-		hud.call("show_notice", "上下文降至 15% — 里世界溢出！血字显现，AI 娘切换里世界台词")
+		hud.call("show_notice", "上下文降至 15% — 里世界溢出！血字与西南角【未定义黑影】显现")
 
 
 func _on_grant_m3_debug_kit() -> void:
@@ -593,6 +618,40 @@ func _on_grant_m4_gpu_kit() -> void:
 	GameState.add_item("gpu_huawei", 4)
 	GameState.add_item("gpu_600900", 1)
 	hud.call("show_notice", "M4 测试显卡已发放：580 ×5 / 10600 ×3 / 20600 ×3 / 50900 ×4 / 华为 ×4 / 600900 ×1", 4.2)
+
+
+func _on_grant_m5_battle_kit() -> void:
+	# 主武器与投掷武器
+	GameState.add_item("ram_knife", 1)
+	GameState.add_item("ssd_sword", 1)
+	GameState.add_item("water", 5)
+	GameState.add_item("cement_resistor", 5)
+	GameState.add_item("bulging_capacitor", 3)
+	# 全 6 种消耗品 + 580 矿卡（测爬虫偷卡 / 未定义黑影闪光）
+	GameState.add_item("thermal_paste", 3)
+	GameState.add_item("compressed_air", 3)
+	GameState.add_item("cmos_battery", 3)
+	GameState.add_item("alcohol_wipe", 3)
+	GameState.add_item("black_tape", 4)
+	GameState.add_item("wd40", 3)
+	GameState.add_item("gpu_580", 3)
+	# 其余 5 种机箱 + 5 种散热（在大 PSU 整理装备中自由切换）
+	GameState.add_item("integrity_case", 1)
+	GameState.add_item("shoebox_open_case", 1)
+	GameState.add_item("rusty_iron_case", 1)
+	GameState.add_item("tempered_glass_case", 1)
+	GameState.add_item("rog_case", 1)
+	GameState.add_item("stock_fan", 1)
+	GameState.add_item("dual_tower_air", 1)
+	GameState.add_item("leaky_water_cooler", 1)
+	GameState.add_item("aio_360", 1)
+	GameState.add_item("ln2_cannon", 1)
+	hud.call("show_notice", "M5 全套战斗硬件测试包已入库（武器/水/水泥电阻/鼓包电容/全机箱散热消耗品），请在大 PSU 换装！", 4.5)
+
+
+func _on_drain_token_debug() -> void:
+	GameState.set_token(10)
+	hud.call("show_notice", "调试：Token 已降至 10 / %d，开战强放任意技能即可验证【输出截断】！" % GameState.max_token, 3.8)
 
 
 func _on_toggle_heroine_kill_debug() -> void:
