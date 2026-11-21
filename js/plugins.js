@@ -8,5 +8,5 @@ var $plugins =
 {"name":"BlackAI_PSU","status":true,"description":"《BLACK AI》M3 巨型大 PSU 电源据点菜单（清理缓存 / 升级 HP / 四槽装备背包 / 三槽存读档）与背面 I/O 总开关断电蓝屏彩蛋","parameters":{}},
 {"name":"BlackAI_BattleUI","status":true,"description":"《BLACK AI》M5+M6 BS2 高难回合制战斗界面（含输出截断横幅、并发助战按钮、真小 C 封锁、红线划掉逃跑与 1-bit 血条乱码）","parameters":{}},
 {"name":"BlackAI_Explore","status":true,"description":"《BLACK AI》M2 2D 上帝视角探索系统：八向移动、鼠标提灯实时 2D 阴影、F 切档、上下文溢出暗角血字抖动、HUD、挥砍先手与 Esc 菜单","parameters":{}},
-{"name":"BlackAI_AltarWorld","status":true,"description":"《BLACK AI》Map001 巨型电源圣坛世界协调器（大 PSU 正背面交互、7 AI 娘对话/拔刀、6 暗影怪遇敌/刷新与调试补给）","parameters":{}}
+{"name":"BlackAI_AltarWorld","status":true,"description":"《BLACK AI》巨型电源圣坛世界协调器（大 PSU 正背面交互、7 AI 娘对话/拔刀、6 暗影怪遇敌/刷新与调试补给）","parameters":{}}
 ];

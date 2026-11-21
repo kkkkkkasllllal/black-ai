@@ -46,7 +46,7 @@ REQUIRED_BLACKAI_PLUGINS = [
 REQUIRED_MV_JSON = [
     "System.json", "Actors.json", "Classes.json", "Items.json", "Weapons.json",
     "Armors.json", "Skills.json", "States.json", "Enemies.json", "Troops.json",
-    "Tilesets.json", "MapInfos.json", "Map001.json",
+    "Tilesets.json", "MapInfos.json", "Map001.json", "Map002.json",
 ]
 
 ITEM_SECTIONS = ["graphics_cards", "weapons", "consumables", "cases", "coolers", "system_prompts"]
@@ -317,13 +317,19 @@ class Validator:
                 self.err("缺少 MV 原生数据文件: data/{}".format(name))
                 continue
             obj = self._load_json(p)
-            if name == "Map001.json" and isinstance(obj, dict):
-                if obj.get("width") != 32 or obj.get("height") != 20:
-                    self.err("data/Map001.json 尺寸应为 32x20")
-                if len(obj.get("data", [])) != 32 * 20 * 6:
-                    self.err("data/Map001.json data 数组长度与 32x20x6 不符")
+            if name in ("Map001.json", "Map002.json") and isinstance(obj, dict):
+                width, height = (24, 16) if name == "Map001.json" else (32, 20)
+                if (obj.get("width"), obj.get("height")) != (width, height):
+                    self.err("data/{} 尺寸应为 {}x{}".format(name, width, height))
+                if len(obj.get("data", [])) != width * height * 6:
+                    self.err("data/{} 的图层长度与尺寸不符".format(name))
 
         required_imgs = [
+            "img/tilesets/DualCoreHall_D.png",
+            "img/tilesets/DualCoreHall_E.png",
+            "img/characters/$Claude.png",
+            "img/characters/$DeepSeek.png",
+            "img/faces/DualCoreCast.png",
             "img/tilesets/BlackAI_Altar_A5.png",
             "img/tilesets/BlackAI_Altar_B.png",
             "img/characters/$BlackAI_Player.png",

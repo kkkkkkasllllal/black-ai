@@ -9,7 +9,7 @@
 3. img/enemies/BlackAI_*.png（全部 6 种怪物 + 7 位核心 AI 娘常规/里世界裂纹立绘）
 4. img/titles1/BlackAI_Title_PSU.png（1280x720 暗黑大 PSU 标题背景）
 5. 同步 RPG Maker MV 原生 data/*.json（System / Actors / Classes / Items / Weapons /
-   Armors / Skills / States / Enemies / Troops / Tilesets / MapInfos / Map001），
+   Armors / Skills / States / Enemies / Troops / Tilesets / MapInfos / Map002），
    确保用 RPG Maker MV 编辑器打开即完整可视、可编辑、可 Ctrl+R 试玩。
 """
 
@@ -363,8 +363,8 @@ def sync_mv_database() -> None:
     sys_json["gameTitle"] = "BLACK AI"
     sys_json["currencyUnit"] = "碎片"
     sys_json["startMapId"] = 1
-    sys_json["startX"] = 16
-    sys_json["startY"] = 12
+    sys_json["startX"] = 12
+    sys_json["startY"] = 9
     sys_json["partyMembers"] = [1]
     sys_json["title1Name"] = "BlackAI_Title_PSU"
     sys_json["title2Name"] = ""
@@ -586,8 +586,6 @@ def sync_mv_database() -> None:
 
     # 9) Tilesets.json: 新增 Tileset 7 (BLACK AI - 巨型电源圣坛)
     tilesets = load_json(DATA_DIR / "Tilesets.json")
-    while len(tilesets) > 7:
-        tilesets.pop()
     flags = [0] * 8192
     flags[0] = 16
     flags[1536] = 0   # 黑曜石地板
@@ -610,10 +608,10 @@ def sync_mv_database() -> None:
         tilesets[7] = ts7
     save_json(DATA_DIR / "Tilesets.json", tilesets)
 
-    # 10) MapInfos.json & Map001.json (32 x 20 巨型电源圣坛)
+    # 10) MapInfos.json & Map002.json (32 x 20 巨型电源圣坛)
     map_infos = load_json(DATA_DIR / "MapInfos.json")
-    map_infos[1]["name"] = "巨型电源圣坛（M1–M6）"
-    save_json(DATA_DIR / "MapInfos.json", map_infos[:2])
+    map_infos[2]["name"] = "巨型电源圣坛（M1–M6）"
+    save_json(DATA_DIR / "MapInfos.json", map_infos)
 
     w, h = 32, 20
     data_arr = [0] * (w * h * 6)
@@ -676,7 +674,7 @@ def sync_mv_database() -> None:
     for px, py in [(11, 6), (21, 6), (11, 13), (21, 13)]:
         set_tile(px, py, 0, 1540)
 
-    # 构造全部 Map001 事件（大 PSU 正/背面 + 7 核心 AI 娘 + 6 暗影怪）
+    # 构造全部圣坛 事件（大 PSU 正/背面 + 7 核心 AI 娘 + 6 暗影怪）
     def make_event(
         ev_id: int,
         name: str,
@@ -796,15 +794,17 @@ def sync_mv_database() -> None:
         ))
         next_id += 1
 
-    map001 = load_json(DATA_DIR / "Map001.json")
-    map001["displayName"] = "巨型电源圣坛"
-    map001["tilesetId"] = 7
-    map001["width"] = w
-    map001["height"] = h
-    map001["data"] = data_arr
-    map001["events"] = events
-    map001["note"] = "<blackai_region:psu_altar>"
-    save_json(DATA_DIR / "Map001.json", map001)
+    altar = load_json(DATA_DIR / "Map002.json")
+    # Keep editor-authored events after the 19 generated altar events, including the return exit.
+    events.extend(altar["events"][len(events):])
+    altar["displayName"] = "巨型电源圣坛"
+    altar["tilesetId"] = 7
+    altar["width"] = w
+    altar["height"] = h
+    altar["data"] = data_arr
+    altar["events"] = events
+    altar["note"] = "<blackai_region:psu_altar>"
+    save_json(DATA_DIR / "Map002.json", altar)
 
 
 def main() -> None:
@@ -816,7 +816,7 @@ def main() -> None:
     build_heroine_and_enemy_sprites(chars, mons)
     build_title_image()
     sync_mv_database()
-    print("[OK] RPG Maker MV 占位图与原生数据库同步完成（Map001: 32x20，含大 PSU + 7 核心 AI 娘 + 6 暗影怪）")
+    print("[OK] RPG Maker MV 占位图与原生数据库同步完成（Map002: 32x20，含大 PSU + 7 核心 AI 娘 + 6 暗影怪）")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
 /*:
- * @plugindesc 《BLACK AI》Map001 巨型电源圣坛世界协调器（大 PSU 正背面交互、7 AI 娘对话/拔刀、6 暗影怪遇敌/刷新与调试补给）
+ * @plugindesc 《BLACK AI》巨型电源圣坛世界协调器（大 PSU 正背面交互、7 AI 娘对话/拔刀、6 暗影怪遇敌/刷新与调试补给）
  * @author BLACK AI Team
  * @help
- * 统一衔接 Map001 事件与 BlackAI_Core / Explore / PSU / Dialogue / BattleUI。
+ * 统一衔接地图事件与 BlackAI_Core / Explore / PSU / Dialogue / BattleUI。
  */
 
 (function(globalScope) {
@@ -284,13 +284,13 @@
             var py = $gamePlayer.y;
 
             // 大 PSU 正面（南侧 y=10, x=15..17）
-            if (py === 10 && px >= 15 && px <= 17) {
+            if ($dataMap.meta.blackai_region === 'psu_altar' && py === 10 && px >= 15 && px <= 17) {
                 var alarmTag = (BlackAI.State.isContextOverflow() || BlackAI.State.hasAnyCoreHeroineKilled()) ? ' [⚠ 红灯报警]' : '';
                 BlackAI.Explore.promptText = '[E] 打开【巨型大 PSU 电源】据点菜单（清理缓存 / 升级 HP / 整理装备 / 存读档）' + alarmTag;
                 return;
             }
             // 大 PSU 背面红色物理总开关（北侧 y=7, x=16）
-            if (py === 7 && px === 16) {
+            if ($dataMap.meta.blackai_region === 'psu_altar' && py === 7 && px === 16) {
                 var maxP = BlackAI.Data.getConfigInt('psu.back_switch_max_presses', 3);
                 BlackAI.Explore.promptText = '[E] 按动背面红色物理总开关 [I / O]（已按 ' + BlackAI.State.psu_back_switch_presses + ' / ' + maxP + ' 次……）';
                 return;
@@ -458,11 +458,11 @@
         if (Input.isTriggered('ok') && $gameMap && !$gameMap.isEventRunning()) {
             var px = this.x;
             var py = this.y;
-            if (py === 10 && px >= 15 && px <= 17) {
+            if ($dataMap.meta.blackai_region === 'psu_altar' && py === 10 && px >= 15 && px <= 17) {
                 World.onPsuFrontInteract();
                 return true;
             }
-            if (py === 7 && px === 16) {
+            if ($dataMap.meta.blackai_region === 'psu_altar' && py === 7 && px === 16) {
                 World.onPsuBackSwitchInteract();
                 return true;
             }

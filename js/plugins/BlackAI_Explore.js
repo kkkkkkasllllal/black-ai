@@ -113,7 +113,9 @@
     var _Spriteset_Map_createLowerLayer = Spriteset_Map.prototype.createLowerLayer;
     Spriteset_Map.prototype.createLowerLayer = function() {
         _Spriteset_Map_createLowerLayer.call(this);
-        this._createBlackAIFloorOverlays();
+        if ($dataMap.meta.blackai_region === 'psu_altar') {
+            this._createBlackAIFloorOverlays();
+        }
     };
 
     var _Spriteset_Map_createUpperLayer = Spriteset_Map.prototype.createUpperLayer;
@@ -262,6 +264,10 @@
         var ox = -$gameMap.displayX() * 48;
         var oy = -$gameMap.displayY() * 48;
 
+        if (!this._psuCableSprite) {
+            this._renderWorldLabelsAndSlash();
+            return;
+        }
         this._psuCableSprite.x = Math.round(ox);
         this._psuCableSprite.y = Math.round(oy);
         this._bloodSprite.x = Math.round(ox);
@@ -570,7 +576,7 @@
         b.fillRect(16, 14, 444, 2, st.isContextOverflow() ? '#e62e3d' : '#586784');
         b.fontSize = 15;
         b.textColor = '#eef4fc';
-        b.drawText('巨型电源圣坛 · RPG Maker MV 完整版（M1–M6）', 28, 22, 420, 22, 'left');
+        b.drawText($gameMap.displayName(), 28, 22, 420, 22, 'left');
 
         b.fontSize = 14;
         b.textColor = '#d2e2f5';

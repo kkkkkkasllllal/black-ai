@@ -1484,7 +1484,7 @@
 
     Scene_BlackAIBootCheck.prototype.initialize = function() {
         Scene_Base.prototype.initialize.call(this);
-        this._logs = ['自检就绪（RPG Maker MV 1.6.x 框架）。点击下方按钮测试，或点击「进入巨型电源圣坛（M2–M6）」。'];
+        this._logs = ['自检就绪（RPG Maker MV 1.6.x 框架）。点击下方按钮测试，或点击「进入双核大厅」。'];
         this._buttons = [];
     };
 
@@ -1609,7 +1609,7 @@
 
         b.fontSize = 16;
         b.textColor = '#ffd166';
-        b.drawText('自检操作日志（按 Enter 直接进入巨型电源圣坛）：', 56, 502, 1168, 24, 'left');
+        b.drawText('自检操作日志（按 Enter 直接进入双核大厅）：', 56, 502, 1168, 24, 'left');
         var ly = 532;
         for (var j = 0; j < this._logs.length; j++) {
             b.textColor = '#cbd6e6';
@@ -1627,7 +1627,7 @@
 
     var _Window_TitleCommand_makeCommandList = Window_TitleCommand.prototype.makeCommandList;
     Window_TitleCommand.prototype.makeCommandList = function() {
-        this.addCommand('进入圣坛原型（M2–M6）', 'newGame');
+        this.addCommand('进入双核大厅', 'newGame');
         this.addCommand('继续存档', 'continue', this.isContinueEnabled());
         this.addCommand('M1 工程自检面板', 'blackAIBootCheck');
         this.addCommand('系统设置', 'options');
