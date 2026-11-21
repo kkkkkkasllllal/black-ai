@@ -420,6 +420,20 @@ class Validator:
                 if not isinstance(rname, str) or not rname.strip():
                     self.err("config.json regions[{}] name 不能为空".format(idx))
 
+        exploration = config.get("exploration")
+        if not isinstance(exploration, dict):
+            self.err("config.json 缺少 exploration 对象")
+        else:
+            for key in [
+                "tile_size",
+                "move_speed",
+                "lantern_bright_energy",
+                "lantern_dim_energy",
+                "overflow_jitter_px",
+            ]:
+                if not isinstance(exploration.get(key), (int, float)):
+                    self.err("config.json exploration.{} 缺失或非数字".format(key))
+
         return region_ids, status_ids
 
     def _validate_characters(self, data: Dict[str, Any], region_ids: Set[str]) -> Set[str]:
@@ -781,7 +795,7 @@ class Validator:
                     if pattern.search(code_part):
                         self.err("{}:{}: {}".format(rel, lineno, reason))
 
-        tscn_files = sorted(self.root.rglob("*.tscn"))
+        tscn_files = sorted(p for p in self.root.rglob("*.tscn") if ".godot" not in p.parts)
         res_ref_re = re.compile(r'path="res://([^"]+)"')
         for tscn_path in tscn_files:
             rel = tscn_path.relative_to(self.root).as_posix()

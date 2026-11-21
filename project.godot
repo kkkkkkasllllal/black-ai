@@ -12,7 +12,7 @@ config_version=5
 
 config/name="BLACK AI"
 config/description="2D 暗黑童话探索 × BS2 式高难回合制 × 全员可攻略/可击杀 AI 娘"
-config/version="0.1.0-m1"
+config/version="0.2.0-m2"
 run/main_scene="res://scenes/boot/Boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"

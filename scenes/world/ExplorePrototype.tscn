@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/world/ExplorePrototype.gd" id="1_explore"]
+[ext_resource type="PackedScene" path="res://scenes/world/Player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ExplorationHud.tscn" id="3_hud"]
+
+[node name="ExplorePrototype" type="Node2D"]
+script = ExtResource("1_explore")
+
+[node name="FloorLayer" type="TileMapLayer" parent="."]
+z_index = 0
+
+[node name="BloodGraffitiLayer" type="TileMapLayer" parent="."]
+visible = false
+z_index = 1
+
+[node name="WallLayer" type="TileMapLayer" parent="."]
+z_index = 2
+
+[node name="Obstacles" type="Node2D" parent="."]
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.15, 0.16, 0.2, 1)
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+
+[node name="ExplorationHud" parent="." instance=ExtResource("3_hud")]

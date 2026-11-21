@@ -2,13 +2,17 @@ extends Control
 ## M1 启动与骨架自检场景
 ## 用于打开 Godot 4 后立即验证 Autoload 单例、JSON 数据表与核心状态读写链路。
 
+const EXPLORE_PROTOTYPE_SCENE: String = "res://scenes/world/ExplorePrototype.tscn"
+
 @onready var summary_label: RichTextLabel = $Margin/VBox/SummaryLabel
 @onready var log_label: RichTextLabel = $Margin/VBox/LogLabel
+@onready var enter_explore_button: Button = $Margin/VBox/Buttons/EnterExploreButton
 
 
 func _ready() -> void:
 	_refresh_summary()
-	_append_log("M1 骨架自检就绪。点击下方按钮可快速验证 GameState / GlobalMemory / 显卡送礼逻辑。")
+	enter_explore_button.grab_focus()
+	_append_log("自检就绪。点击「进入 M2：2D 上帝视角探索原型」（或按 Enter）开始 M2 试玩。")
 
 
 func _refresh_summary() -> void:
@@ -81,6 +85,12 @@ func _slot_text(slot: String) -> String:
 
 func _append_log(message: String) -> void:
 	log_label.append_text(message + "\n")
+
+
+func _on_enter_explore_button_pressed() -> void:
+	var err: Error = get_tree().change_scene_to_file(EXPLORE_PROTOTYPE_SCENE)
+	if err != OK:
+		_append_log("[场景切换] 无法加载 %s（错误码 %d）" % [EXPLORE_PROTOTYPE_SCENE, err])
 
 
 func _on_test_gpu_button_pressed() -> void:

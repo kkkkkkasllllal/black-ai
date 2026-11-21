@@ -41,6 +41,23 @@
     "token_regen_per_turn": 10,
     "token_truncate_power_mult": 0.5
   },
+  "exploration": {
+    "tile_size": 48,
+    "move_speed": 220.0,
+    "move_accel": 1600.0,
+    "move_friction": 1800.0,
+    "lantern_bright_energy": 1.95,
+    "lantern_bright_scale": 3.3,
+    "lantern_dim_energy": 0.6,
+    "lantern_dim_scale": 1.95,
+    "halo_bright_energy": 0.6,
+    "halo_bright_scale": 1.35,
+    "halo_dim_energy": 0.25,
+    "halo_dim_scale": 0.9,
+    "overflow_jitter_px": 2.4,
+    "critical_jitter_px": 4.8,
+    "debug_context_step": 15
+  },
   "statuses": ["overheat", "lag", "short_circuit", "lock", "frostbite", "crash", "throttled", "leak"],
   "regions": [
     { "id": "psu_altar", "name": "巨型电源圣坛" },
