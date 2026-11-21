@@ -1,0 +1,22 @@
+# Godot 4 cache / imports
+.godot/
+/android/
+*.translation
+
+# Exports
+/build/
+/export/
+*.pck
+*.exe
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
