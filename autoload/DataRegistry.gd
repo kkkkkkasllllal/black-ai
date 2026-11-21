@@ -26,6 +26,8 @@ var _player_skills: Dictionary = {}
 var _player_skill_order: PackedStringArray = PackedStringArray()
 var _enemy_skills: Dictionary = {}
 var _enemy_skill_order: PackedStringArray = PackedStringArray()
+var _bosses: Dictionary = {}
+var _boss_order: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
@@ -47,6 +49,8 @@ func reload() -> void:
 	_player_skill_order.clear()
 	_enemy_skills.clear()
 	_enemy_skill_order.clear()
+	_bosses.clear()
+	_boss_order.clear()
 
 	config = _load_json("config.json")
 
@@ -71,11 +75,12 @@ func reload() -> void:
 	var skills_root: Dictionary = _load_json("skills.json")
 	_player_skill_order = _index_list(skills_root, "player_skills", _player_skills)
 	_enemy_skill_order = _index_list(skills_root, "enemy_skills", _enemy_skills)
+	_boss_order = _index_list(_load_json("bosses.json"), "bosses", _bosses)
 
 	is_loaded = load_errors.is_empty()
 	if is_loaded:
-		print("[DataRegistry] 数据加载完成：物品 %d / 角色 %d / 怪物 %d / 技能 %d / 结局 %d" % [
-			_items.size(), _characters.size(), _monsters.size(), _player_skills.size() + _enemy_skills.size(), _endings.size()])
+		print("[DataRegistry] 数据加载完成：物品 %d / 角色 %d / 怪物 %d / 技能 %d / Boss %d / 结局 %d" % [
+			_items.size(), _characters.size(), _monsters.size(), _player_skills.size() + _enemy_skills.size(), _bosses.size(), _endings.size()])
 	data_reloaded.emit()
 
 
@@ -212,6 +217,18 @@ func get_enemy_skill(skill_id: String) -> Dictionary:
 
 func get_enemy_skill_ids() -> PackedStringArray:
 	return _enemy_skill_order.duplicate()
+
+
+# ---------------------------------------------------------------- AI 娘 Boss 配置
+
+func get_boss_profile(character_id: String) -> Dictionary:
+	if not _bosses.has(character_id):
+		return {}
+	return (_bosses[character_id] as Dictionary).duplicate(true)
+
+
+func get_boss_profile_ids() -> PackedStringArray:
+	return _boss_order.duplicate()
 
 
 # ---------------------------------------------------------------- 好感分段

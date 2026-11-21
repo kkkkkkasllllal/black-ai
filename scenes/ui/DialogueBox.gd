@@ -6,6 +6,7 @@ extends CanvasLayer
 signal opened(character_id: String)
 signal closed(character_id: String)
 signal open_gift_requested(character_id: String)
+signal challenge_boss_requested(character_id: String)
 
 const DIALOGUE_PARSER_SCRIPT: GDScript = preload("res://scripts/dialogue/DialogueParser.gd")
 const DIALOGUE_RUNNER_SCRIPT: GDScript = preload("res://scripts/dialogue/DialogueRunner.gd")
@@ -23,6 +24,7 @@ const DIALOGUE_RUNNER_SCRIPT: GDScript = preload("res://scripts/dialogue/Dialogu
 @onready var dialogue_text: RichTextLabel = $Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/DialogueText
 @onready var choices_box: VBoxContainer = $Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/ChoicesBox
 @onready var gift_button: Button = $Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/GiftButton
+@onready var challenge_button: Button = $Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/ChallengeButton
 @onready var next_button: Button = $Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/NextButton
 @onready var close_button: Button = $Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/CloseButton
 
@@ -165,6 +167,7 @@ func _refresh_character_header() -> void:
 		affection_text_label.modulate = Color(1.0, 0.86, 0.45, 1.0) if aff >= 100 else Color(0.86, 0.90, 0.96, 1.0)
 
 	gift_button.visible = GameState.is_core_heroine(_character_id)
+	challenge_button.visible = GameState.is_core_heroine(_character_id) and GameState.is_character_alive(_character_id)
 
 
 func _on_line_ready(speaker: String, text: String) -> void:
@@ -216,6 +219,12 @@ func _on_next_button_pressed() -> void:
 
 func _on_gift_button_pressed() -> void:
 	open_gift_requested.emit(_character_id)
+
+
+func _on_challenge_button_pressed() -> void:
+	var cid: String = _character_id
+	close_dialogue()
+	challenge_boss_requested.emit(cid)
 
 
 func _on_close_button_pressed() -> void:

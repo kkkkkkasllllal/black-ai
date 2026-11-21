@@ -18,6 +18,7 @@ signal closed(last_reaction_section: String, target_character_id: String)
 @onready var target_bar_normal: ProgressBar = $Backdrop/Center/Panel/Margin/VBox/Tabs/GiftTab/TargetSummary/Margin/HBox/InfoCol/BarsRow/NormalBar
 @onready var target_bar_overflow: ProgressBar = $Backdrop/Center/Panel/Margin/VBox/Tabs/GiftTab/TargetSummary/Margin/HBox/InfoCol/BarsRow/OverflowBar
 @onready var gpu_list_box: VBoxContainer = $Backdrop/Center/Panel/Margin/VBox/Tabs/GiftTab/GpuScroll/GpuListBox
+@onready var affection_legend_label: Label = $Backdrop/Center/Panel/Margin/VBox/Tabs/AffectionTab/Legend
 @onready var affection_list_box: VBoxContainer = $Backdrop/Center/Panel/Margin/VBox/Tabs/AffectionTab/AffectionScroll/AffectionListBox
 @onready var feedback_label: Label = $Backdrop/Center/Panel/Margin/VBox/FeedbackLabel
 @onready var reject_overlay: ColorRect = $RejectOverlay
@@ -241,6 +242,12 @@ func _describe_gpu_effect(character_id: String, card: Dictionary, gift_group: St
 # ---------------------------------------------------------------- Tab 1: 全员好感度总览（0–200%）
 
 func _refresh_affection_tab() -> void:
+	var assist_min: int = DataRegistry.get_config_int("affection.assist_min", 70)
+	var current_assist: String = DataRegistry.get_character_name(GameState.assist_partner_id) if not GameState.assist_partner_id.is_empty() else "无"
+	affection_legend_label.text = "左槽：0–100%% 常规 | 右槽（红）：101–200%% 偏执溢出  |  当前 API 并发助战：%s（好感≥%d%%可设）" % [
+		current_assist,
+		assist_min,
+	]
 	_clear_children(affection_list_box)
 	for heroine_variant in GameState.CORE_HEROINE_IDS:
 		var cid: String = str(heroine_variant)
@@ -316,6 +323,19 @@ func _refresh_affection_tab() -> void:
 		bar_over.show_percentage = false
 		bar_over.modulate = Color(0.95, 0.16, 0.25, 1.0)
 		bars_row.add_child(bar_over)
+
+		var is_current_assist: bool = (GameState.assist_partner_id == cid)
+		var assist_btn: Button = Button.new()
+		if is_current_assist:
+			assist_btn.text = "已设助战(取消)"
+			assist_btn.modulate = Color(0.65, 0.95, 1.0, 1.0)
+			assist_btn.pressed.connect(_on_toggle_assist_clicked.bind(""))
+		else:
+			assist_btn.text = "设并发助战"
+			assist_btn.disabled = (not alive) or (aff < assist_min)
+			assist_btn.tooltip_text = "需要好感达到 %d%% 且角色存活" % assist_min
+			assist_btn.pressed.connect(_on_toggle_assist_clicked.bind(cid))
+		row.add_child(assist_btn)
 
 		if not _locked_to_dialogue:
 			var jump_btn: Button = Button.new()
@@ -427,6 +447,17 @@ func _on_select_target_heroine(cid: String) -> void:
 func _on_overview_gift_clicked(cid: String) -> void:
 	_target_character_id = cid
 	tabs.current_tab = 0
+	refresh_all()
+
+
+func _on_toggle_assist_clicked(cid: String) -> void:
+	if cid.is_empty():
+		GameState.set_assist_partner("")
+		feedback_label.text = "已取消 API 并发助战伙伴。"
+	elif GameState.set_assist_partner(cid):
+		feedback_label.text = "已将【%s】设为 API 并发助战伙伴！（战斗中可随时呼叫，注意修罗场组合！）" % DataRegistry.get_character_name(cid)
+	else:
+		feedback_label.text = "设置助战失败：需要好感 ≥ 70% 且角色存活。"
 	refresh_all()
 
 

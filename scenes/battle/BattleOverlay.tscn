@@ -99,6 +99,28 @@ offset_right = 112.0
 offset_bottom = 70.0
 color = Color(1, 0.18, 0.22, 1)
 
+[node name="PortraitCrackA" type="ColorRect" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder"]
+visible = false
+layout_mode = 0
+offset_left = 10.0
+offset_top = 26.0
+offset_right = 142.0
+offset_bottom = 35.0
+rotation = 0.52
+mouse_filter = 2
+color = Color(0.06, 0.0, 0.01, 0.96)
+
+[node name="PortraitCrackB" type="ColorRect" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder"]
+visible = false
+layout_mode = 0
+offset_left = 8.0
+offset_top = 102.0
+offset_right = 140.0
+offset_bottom = 111.0
+rotation = -0.44
+mouse_filter = 2
+color = Color(0.96, 0.08, 0.16, 0.96)
+
 [node name="EnemyInfoCol" type="VBoxContainer" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -227,7 +249,7 @@ theme_override_constants/separation = 8
 
 [node name="CmdRow" type="HBoxContainer" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
 [node name="AttackButton" type="Button" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow"]
 custom_minimum_size = Vector2(0, 36)
@@ -245,7 +267,7 @@ text = "Token 技能"
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "防御（减伤50%）"
+text = "防御(-50%)"
 
 [node name="ItemButton" type="Button" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow"]
 custom_minimum_size = Vector2(0, 36)
@@ -253,11 +275,33 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "硬件物品"
 
+[node name="AssistButton" type="Button" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "API助战"
+
 [node name="EscapeButton" type="Button" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow"]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "逃跑"
+
+[node name="EscapeStrikeLine" type="ColorRect" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/EscapeButton"]
+visible = false
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = 4.0
+offset_top = -2.0
+offset_right = -4.0
+offset_bottom = 2.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.08, 0.14, 0.96)
 
 [node name="SubmenuTitle" type="Label" parent="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox"]
 layout_mode = 2
@@ -283,5 +327,6 @@ text = "返回探索地图（Enter）"
 [connection signal="pressed" from="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/SkillButton" to="." method="_on_skill_button_pressed"]
 [connection signal="pressed" from="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/DefendButton" to="." method="_on_defend_button_pressed"]
 [connection signal="pressed" from="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/ItemButton" to="." method="_on_item_button_pressed"]
+[connection signal="pressed" from="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/AssistButton" to="." method="_on_assist_button_pressed"]
 [connection signal="pressed" from="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/EscapeButton" to="." method="_on_escape_button_pressed"]
 [connection signal="pressed" from="Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/FinishButton" to="." method="_on_finish_button_pressed"]

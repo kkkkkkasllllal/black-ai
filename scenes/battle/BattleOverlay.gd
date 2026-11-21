@@ -1,20 +1,27 @@
 extends CanvasLayer
-## M5 BS2 同款高难回合制战斗界面（CanvasLayer 覆盖层，战后无缝返回探索坐标）
-## 通过 preload 加载 BattleEngine.gd，不依赖编辑器全局 class_name 缓存。
+## M5 + M6 BS2 同款高难回合制战斗界面（覆盖层，战后无缝返回探索坐标）
+## 支持：
+## - 普通 / 精英怪物战（start_monster_battle）
+## - 7 位核心 AI 娘 Boss 战（start_heroine_boss_battle）
+## - API 并发助战按钮 + 修罗场警示
+## - 真小 C 礼貌封锁单个指令按钮
+## - 上下文溢出 Boss 异变：立绘裂纹黑化 + 红线划掉逃跑键 + 血条 1-bit 乱码扰动 + SL 点名
 
-signal battle_started(monster_id: String)
-signal battle_finished(outcome: String, monster_id: String, enemy_world_node: Node2D)
+signal battle_started(target_id: String, is_heroine_boss: bool)
+signal battle_finished(outcome: String, target_id: String, is_heroine_boss: bool, world_node: Node2D)
 
 const BATTLE_ENGINE_SCRIPT: GDScript = preload("res://scripts/battle/BattleEngine.gd")
+const GLITCH_CHARS: Array = ["█", "▓", "▒", "░", "?", "#", "4", "0"]
 
 @onready var backdrop: ColorRect = $Backdrop
-@onready var frame_panel: PanelContainer = $Backdrop/Margin/FramePanel
 @onready var turn_label: Label = $Backdrop/Margin/FramePanel/Margin/RootVBox/TopBar/TurnLabel
 @onready var enemy_title_label: Label = $Backdrop/Margin/FramePanel/Margin/RootVBox/TopBar/EnemyTitleLabel
 @onready var enemy_portrait_bg: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder
 @onready var enemy_portrait_fill: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder/PortraitFill
 @onready var enemy_eye_left: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder/EyeLeft
 @onready var enemy_eye_right: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder/EyeRight
+@onready var portrait_crack_a: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder/PortraitCrackA
+@onready var portrait_crack_b: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/PortraitHolder/PortraitBorder/PortraitCrackB
 @onready var enemy_hp_label: Label = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/EnemyInfoCol/EnemyHpLabel
 @onready var enemy_hp_bar: ProgressBar = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/EnemyInfoCol/EnemyHpBar
 @onready var enemy_stats_label: Label = $Backdrop/Margin/FramePanel/Margin/RootVBox/EnemyRow/EnemyInfoCol/EnemyStatsLabel
@@ -35,18 +42,24 @@ const BATTLE_ENGINE_SCRIPT: GDScript = preload("res://scripts/battle/BattleEngin
 @onready var skill_button: Button = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/SkillButton
 @onready var defend_button: Button = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/DefendButton
 @onready var item_button: Button = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/ItemButton
+@onready var assist_button: Button = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/AssistButton
 @onready var escape_button: Button = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/EscapeButton
+@onready var escape_strike_line: ColorRect = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/CmdRow/EscapeButton/EscapeStrikeLine
 @onready var submenu_title: Label = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/SubmenuTitle
 @onready var submenu_list: VBoxContainer = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/SubmenuScroll/SubmenuList
 @onready var finish_button: Button = $Backdrop/Margin/FramePanel/Margin/RootVBox/BottomRow/CommandCard/Margin/VBox/FinishButton
 
 var _engine: RefCounted = null
 var _is_open: bool = false
-var _monster_id: String = ""
-var _enemy_world_node: Node2D = null
+var _target_id: String = ""
+var _is_heroine_boss: bool = false
+var _world_node: Node2D = null
 var _active_submenu: String = "" # "" / "skills" / "items"
 var _fx_timer: float = 0.0
 var _fx_kind: String = ""
+var _glitch_timer: float = 0.0
+var _clean_enemy_hp_text: String = ""
+var _clean_player_hp_text: String = ""
 var _portrait_base_pos: Vector2 = Vector2.ZERO
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -55,12 +68,17 @@ func _ready() -> void:
 	_rng.randomize()
 	visible = false
 	backdrop.visible = false
+	escape_strike_line.visible = false
+	portrait_crack_a.visible = false
+	portrait_crack_b.visible = false
 	_portrait_base_pos = enemy_portrait_bg.position
 
 
 func _process(delta: float) -> void:
 	if not _is_open:
 		return
+
+	# 受击/特效震动
 	if _fx_timer > 0.0:
 		_fx_timer = maxf(0.0, _fx_timer - delta)
 		if _fx_timer > 0.0:
@@ -72,6 +90,15 @@ func _process(delta: float) -> void:
 		else:
 			enemy_portrait_bg.position = _portrait_base_pos
 			enemy_portrait_bg.modulate = Color.WHITE
+
+	# 上下文溢出 Boss 战：1-bit 乱码糊血条演出
+	if _engine != null and bool(_engine.get("hp_bar_glitched")):
+		_glitch_timer += delta
+		if _glitch_timer >= 0.18:
+			_glitch_timer = 0.0
+			enemy_hp_label.text = _glitch_text(_clean_enemy_hp_text) + " [ERR_0x580]"
+			player_hp_label.text = _glitch_text(_clean_player_hp_text) + " [CORRUPT]"
+			enemy_hp_bar.modulate = Color(1.0, 0.14, 0.24, 1.0) if _rng.randf() < 0.5 else Color(0.72, 0.05, 0.18, 1.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -89,22 +116,36 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func start_monster_battle(monster_id: String, enemy_world_node: Node2D, is_preemptive: bool = false) -> void:
+	_open_battle(monster_id, false, enemy_world_node, is_preemptive)
+
+
+func start_heroine_boss_battle(character_id: String, npc_world_node: Node2D, is_preemptive: bool = false) -> void:
+	_open_battle(character_id, true, npc_world_node, is_preemptive)
+
+
+func _open_battle(target_id: String, heroine_boss: bool, world_node: Node2D, is_preemptive: bool) -> void:
 	if _is_open:
 		return
 	_engine = BATTLE_ENGINE_SCRIPT.new() as RefCounted
-	_monster_id = monster_id
-	_enemy_world_node = enemy_world_node
+	_target_id = target_id
+	_is_heroine_boss = heroine_boss
+	_world_node = world_node
 	_active_submenu = ""
+	_glitch_timer = 0.0
 	_is_open = true
 	visible = true
 	backdrop.visible = true
 	combat_log.clear()
 
-	var intro_logs_variant: Variant = _engine.call("start_monster_battle", monster_id, is_preemptive)
+	var intro_logs_variant: Variant = null
+	if heroine_boss:
+		intro_logs_variant = _engine.call("start_heroine_boss_battle", target_id, is_preemptive)
+	else:
+		intro_logs_variant = _engine.call("start_monster_battle", target_id, is_preemptive)
 	_append_logs(intro_logs_variant)
 	_refresh_all()
 	attack_button.grab_focus()
-	battle_started.emit(monster_id)
+	battle_started.emit(target_id, heroine_boss)
 
 
 func is_open() -> bool:
@@ -143,6 +184,10 @@ func _on_item_button_pressed() -> void:
 	_set_submenu("items" if _active_submenu != "items" else "")
 
 
+func _on_assist_button_pressed() -> void:
+	_execute_turn("assist")
+
+
 func _on_escape_button_pressed() -> void:
 	_execute_turn("escape")
 
@@ -163,14 +208,15 @@ func _close_and_emit() -> void:
 	if not _is_open:
 		return
 	var outcome: String = str(_engine.get("phase")) if _engine != null else "escaped"
-	var mid: String = _monster_id
-	var world_node: Node2D = _enemy_world_node
+	var tid: String = _target_id
+	var was_heroine: bool = _is_heroine_boss
+	var wnode: Node2D = _world_node
 	_is_open = false
 	visible = false
 	backdrop.visible = false
 	_engine = null
-	_enemy_world_node = null
-	battle_finished.emit(outcome, mid, world_node)
+	_world_node = null
+	battle_finished.emit(outcome, tid, was_heroine, wnode)
 
 
 # ---------------------------------------------------------------- UI 刷新
@@ -182,20 +228,42 @@ func _refresh_all() -> void:
 	var enemy: Dictionary = enemy_variant if enemy_variant is Dictionary else {}
 	var turn_no: int = int(_engine.get("turn_number"))
 	var phase: String = str(_engine.get("phase"))
+	var is_overflow_boss: bool = bool(_engine.get("is_overflow_boss"))
+	var escape_crossed: bool = bool(_engine.get("escape_crossed_out"))
+	var glitched_hp: bool = bool(_engine.get("hp_bar_glitched"))
+	var locked_cmd: String = str(_engine.get("locked_command"))
+	var enraged: bool = bool(_engine.get("boss_enraged"))
 
-	turn_label.text = "第 %d 回合  |  BS2 高难回合制" % turn_no
-	var boss_tag: String = " [区域精英]" if bool(enemy.get("is_boss", false)) else ""
-	var mode_str: String = str(enemy.get("mode", ""))
-	var mode_tag: String = ""
-	if mode_str == "deep_think":
-		mode_tag = " · 重型深思态"
-	elif mode_str == "flash":
-		mode_tag = " · 闪速抢答态"
-	enemy_title_label.text = "%s%s%s" % [str(enemy.get("name", _monster_id)), boss_tag, mode_tag]
+	backdrop.color = Color(0.06, 0.01, 0.02, 0.96) if is_overflow_boss else Color(0.02, 0.02, 0.03, 0.95)
+	var mode_tag_top: String = "里世界异变 BOSS 战" if is_overflow_boss else ("核心 AI 娘 BOSS 战" if _is_heroine_boss else "BS2 高难回合制")
+	turn_label.text = "第 %d 回合  |  %s" % [turn_no, mode_tag_top]
 
-	# 敌方立绘与颜色
+	var title_suffix: String = ""
+	if _is_heroine_boss:
+		var subtitle: String = str(enemy.get("title", ""))
+		if not subtitle.is_empty():
+			title_suffix = "（%s）" % subtitle
+		if is_overflow_boss:
+			title_suffix += " [里世界黑化]"
+		if enraged:
+			title_suffix += " [狂暴锁定!]"
+	elif bool(enemy.get("is_boss", false)):
+		title_suffix = " [区域精英]"
+		var mstr: String = str(enemy.get("mode", ""))
+		if mstr == "deep_think":
+			title_suffix += " · 重型深思态"
+		elif mstr == "flash":
+			title_suffix += " · 闪速抢答态"
+	enemy_title_label.text = "%s%s" % [str(enemy.get("name", _target_id)), title_suffix]
+	enemy_title_label.modulate = Color(1.0, 0.34, 0.42, 1.0) if (is_overflow_boss or enraged) else Color.WHITE
+
+	# 敌方立绘、裂纹与状态着色
 	var accent: Color = Color.from_string(str(enemy.get("placeholder_color", "#888888")), Color.GRAY)
-	enemy_portrait_fill.color = accent.darkened(0.62)
+	var corrupted_portrait: bool = is_overflow_boss or enraged
+	portrait_crack_a.visible = corrupted_portrait
+	portrait_crack_b.visible = corrupted_portrait
+	enemy_portrait_fill.color = accent.darkened(0.42 if corrupted_portrait else (0.18 if _is_heroine_boss else 0.62))
+
 	var charging: bool = not str(enemy.get("charging_skill_id", "")).is_empty()
 	var enemy_sts_variant: Variant = enemy.get("statuses", {})
 	var enemy_sts: Dictionary = enemy_sts_variant if enemy_sts_variant is Dictionary else {}
@@ -203,6 +271,10 @@ func _refresh_all() -> void:
 		enemy_portrait_bg.color = Color(0.28, 0.78, 1.0, 1.0)
 		enemy_eye_left.color = Color(0.35, 0.85, 1.0, 1.0)
 		enemy_eye_right.color = Color(0.35, 0.85, 1.0, 1.0)
+	elif corrupted_portrait:
+		enemy_portrait_bg.color = Color(0.95, 0.14, 0.22, 1.0)
+		enemy_eye_left.color = Color(1.0, 0.12, 0.18, 1.0)
+		enemy_eye_right.color = Color(1.0, 0.12, 0.18, 1.0)
 	elif charging:
 		enemy_portrait_bg.color = Color(1.0, 0.32, 0.16, 1.0)
 		enemy_eye_left.color = Color(1.0, 0.88, 0.25, 1.0)
@@ -214,7 +286,8 @@ func _refresh_all() -> void:
 
 	var ehp: int = int(enemy.get("hp", 0))
 	var emax: int = maxi(1, int(enemy.get("max_hp", 1)))
-	enemy_hp_label.text = "敌方 HP：%d / %d" % [ehp, emax]
+	_clean_enemy_hp_text = "敌方 HP：%d / %d" % [ehp, emax]
+	enemy_hp_label.text = _glitch_text(_clean_enemy_hp_text) + " [ERR_0x580]" if glitched_hp else _clean_enemy_hp_text
 	enemy_hp_bar.max_value = float(emax)
 	enemy_hp_bar.value = float(ehp)
 	enemy_hp_bar.modulate = Color(0.92, 0.22, 0.28, 1.0)
@@ -230,27 +303,36 @@ func _refresh_all() -> void:
 		int(_engine.call("get_enemy_effective_spd")),
 		tags_str,
 	]
-	enemy_status_label.text = "敌方状态：%s" % str(_engine.call("format_status_badges", enemy_sts))
+	enemy_status_label.text = "敌方状态：%s" % str(_engine.call("format_status_badges", enemy_sts, true))
 	enemy_intent_label.text = str(_engine.call("get_enemy_intent_text"))
-	enemy_intent_label.modulate = Color(1.0, 0.45, 0.35, 1.0) if charging else Color(0.92, 0.86, 0.68, 1.0)
+	enemy_intent_label.modulate = Color(1.0, 0.45, 0.35, 1.0) if (charging or enraged) else Color(0.92, 0.86, 0.68, 1.0)
 
-	# 顶部截断/碎裂高亮横幅
+	# 顶部警示横幅（优先级：输出截断 > 修罗场/溢出 UI 破坏 > 侧透玻璃碎裂）
 	var trunc_banner: String = str(_engine.get("last_truncation_banner"))
+	var rivalry_banner: String = str(_engine.get("boss_rivalry_banner"))
 	if not trunc_banner.is_empty():
 		alert_banner.visible = true
 		alert_banner.text = trunc_banner
 		alert_banner.modulate = Color(1.0, 0.36, 0.36, 1.0)
+	elif not rivalry_banner.is_empty() or is_overflow_boss:
+		alert_banner.visible = true
+		alert_banner.text = rivalry_banner
+		alert_banner.modulate = Color(1.0, 0.28, 0.42, 1.0)
 	elif GameState.is_case_broken:
 		alert_banner.visible = true
-		alert_banner.text = "警告：【侧透玻璃机箱】已碎裂，机箱防御归零！请在【物品】中使用【黑胶带】紧急修补！"
+		alert_banner.text = "警告：【侧透玻璃机箱】已碎裂，机箱防御归零！请在【硬件物品】中使用【黑胶带】紧急修补！"
 		alert_banner.modulate = Color(1.0, 0.48, 0.56, 1.0)
 	else:
 		alert_banner.visible = false
 		alert_banner.text = ""
+	if is_overflow_boss:
+		var overflow_notice: String = "【里世界 UI 破坏】逃跑已划掉 · 血条乱码 | %s" % str(_engine.get("overflow_memory_summary"))
+		alert_banner.text = overflow_notice if alert_banner.text.is_empty() else alert_banner.text + "\n" + overflow_notice
 
 	# 玩家状态面板
 	var pmax_hp: int = GameState.get_effective_max_hp()
-	player_hp_label.text = "HP：%d / %d" % [GameState.hp, pmax_hp]
+	_clean_player_hp_text = "HP：%d / %d" % [GameState.hp, pmax_hp]
+	player_hp_label.text = _glitch_text(_clean_player_hp_text) + " [CORRUPT]" if glitched_hp else _clean_player_hp_text
 	player_hp_bar.max_value = float(pmax_hp)
 	player_hp_bar.value = float(GameState.hp)
 	player_hp_bar.modulate = Color(0.38, 0.85, 0.52, 1.0) if GameState.hp > int(float(pmax_hp) * 0.35) else Color(0.95, 0.25, 0.28, 1.0)
@@ -290,9 +372,15 @@ func _refresh_all() -> void:
 
 	var psts_variant: Variant = _engine.get("player_statuses")
 	var psts: Dictionary = psts_variant if psts_variant is Dictionary else {}
-	player_status_label.text = "我方状态：%s" % str(_engine.call("format_status_badges", psts))
+	var assist_str: String = DataRegistry.get_character_name(GameState.assist_partner_id) if not GameState.assist_partner_id.is_empty() else "无"
+	player_status_label.text = "我方状态：%s  |  并发助战：%s" % [
+		str(_engine.call("format_status_badges", psts, false)),
+		assist_str,
+	]
 
-	# 指令区 / 结算区切换
+	# 指令按钮动态态（真小 C 礼貌封锁 + 溢出划掉逃跑键 + API 并发助战按钮）
+	_refresh_command_buttons(locked_cmd, escape_crossed)
+
 	var over: bool = phase != "player_input"
 	cmd_row.visible = not over
 	finish_button.visible = over
@@ -303,6 +391,47 @@ func _refresh_all() -> void:
 		finish_button.grab_focus()
 	else:
 		_rebuild_submenu()
+
+
+func _refresh_command_buttons(locked_cmd: String, escape_crossed: bool) -> void:
+	skill_button.disabled = (locked_cmd == "skill")
+	skill_button.text = "技能[封锁]" if locked_cmd == "skill" else "Token技能"
+	skill_button.modulate = Color(1.0, 0.45, 0.48, 1.0) if locked_cmd == "skill" else Color.WHITE
+
+	defend_button.disabled = (locked_cmd == "defend")
+	defend_button.text = "防御[封锁]" if locked_cmd == "defend" else "防御(-50%)"
+	defend_button.modulate = Color(1.0, 0.45, 0.48, 1.0) if locked_cmd == "defend" else Color.WHITE
+
+	item_button.disabled = (locked_cmd == "item")
+	item_button.text = "物品[封锁]" if locked_cmd == "item" else "硬件物品"
+	item_button.modulate = Color(1.0, 0.45, 0.48, 1.0) if locked_cmd == "item" else Color.WHITE
+
+	# API 并发助战按钮
+	var assist_v: Variant = _engine.call("can_use_assist")
+	var assist_info: Dictionary = assist_v if assist_v is Dictionary else {}
+	var assist_ok: bool = bool(assist_info.get("ok", false))
+	var pname: String = str(assist_info.get("partner_name", ""))
+	assist_button.disabled = not assist_ok
+	if assist_ok:
+		assist_button.text = "助战:%s" % pname
+		assist_button.modulate = Color(0.68, 0.94, 1.0, 1.0)
+	elif not pname.is_empty():
+		assist_button.text = "助战(CD)"
+		assist_button.modulate = Color(0.70, 0.72, 0.76, 1.0)
+	else:
+		assist_button.text = "助战(未设)"
+		assist_button.modulate = Color(0.66, 0.68, 0.72, 1.0)
+	assist_button.tooltip_text = str(assist_info.get("reason", ""))
+
+	# 溢出态红线划掉逃跑键
+	escape_button.disabled = escape_crossed
+	escape_strike_line.visible = escape_crossed
+	if escape_crossed:
+		escape_button.text = "逃跑[划掉]"
+		escape_button.modulate = Color(1.0, 0.36, 0.40, 1.0)
+	else:
+		escape_button.text = "逃跑"
+		escape_button.modulate = Color.WHITE
 
 
 func _set_submenu(mode: String) -> void:
@@ -353,7 +482,7 @@ func _rebuild_submenu() -> void:
 				btn.pressed.connect(_on_item_chosen.bind(item_id))
 				submenu_list.add_child(btn)
 	else:
-		submenu_title.text = "请选择本回合行动（普攻 / Token 技能 / 防御减伤 50% / 硬件物品 / 逃跑）"
+		submenu_title.text = "请选择本回合行动（普攻 / Token 技能 / 防御减伤 50% / 硬件物品 / API 并发助战 / 逃跑）"
 
 
 func _collect_battle_items() -> PackedStringArray:
@@ -370,8 +499,10 @@ func _collect_battle_items() -> PackedStringArray:
 			result.append(item_id)
 		elif cat == "consumables":
 			var usable_v: Variant = item.get("usable_in", [])
-			if usable_v is Array and (usable_v as Array).has("battle"):
-				result.append(item_id)
+			if usable_v is Array:
+				var usable_arr: Array = usable_v
+				if usable_arr.has("battle"):
+					result.append(item_id)
 		elif item_id == "gpu_580":
 			result.append(item_id)
 	return result
@@ -380,7 +511,7 @@ func _collect_battle_items() -> PackedStringArray:
 func _battle_item_hint(item_id: String, item: Dictionary) -> String:
 	match item_id:
 		"water":
-			return "投掷（对电子/AI 单位触发隐藏属性：AI 宕机瘫痪 2 回合 / 概率即死）"
+			return "投掷（对电子/AI 单位触发隐藏属性：AI 宕机瘫痪 2 回合 / 打断深度思考）"
 		"cement_resistor":
 			return "投掷（强行限流 2 回合降攻降速 + 100% 打断敌方蓄力）"
 		"bulging_capacitor":
@@ -403,6 +534,19 @@ func _battle_item_hint(item_id: String, item: Dictionary) -> String:
 			return str(item.get("description", ""))
 
 
+func _glitch_text(source: String) -> String:
+	if source.length() < 4:
+		return source
+	var out: String = ""
+	for i in range(source.length()):
+		var ch: String = source.substr(i, 1)
+		if ch >= "0" and ch <= "9" and _rng.randf() < 0.45:
+			out += str(GLITCH_CHARS[_rng.randi_range(0, GLITCH_CHARS.size() - 1)])
+		else:
+			out += ch
+	return out
+
+
 func _trigger_fx(fx_kind: String) -> void:
 	_fx_kind = fx_kind
 	_fx_timer = 0.28
@@ -422,6 +566,8 @@ func _trigger_fx(fx_kind: String) -> void:
 func _outcome_title(phase: String) -> String:
 	match phase:
 		"victory":
+			if _is_heroine_boss:
+				return "【核心 AI 娘已清空】战利品已入库，击杀记录已写入 GlobalMemory！"
 			return "【战斗胜利】已清理敌方进程！"
 		"defeat":
 			return "【战斗败北】你倒在了废墟之中……"

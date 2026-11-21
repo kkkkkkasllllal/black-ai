@@ -161,6 +161,11 @@ theme_override_constants/separation = 10
 layout_mode = 2
 text = "送 6 档显卡"
 
+[node name="ChallengeButton" type="Button" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow"]
+layout_mode = 2
+modulate = Color(1, 0.48, 0.5, 1)
+text = "拔刀开战"
+
 [node name="Spacer" type="Control" parent="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -174,5 +179,6 @@ layout_mode = 2
 text = "结束对话（Esc）"
 
 [connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/GiftButton" to="." method="_on_gift_button_pressed"]
+[connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/ChallengeButton" to="." method="_on_challenge_button_pressed"]
 [connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/NextButton" to="." method="_on_next_button_pressed"]
 [connection signal="pressed" from="Backdrop/BottomMargin/Panel/Margin/HBox/ContentCol/FooterRow/CloseButton" to="." method="_on_close_button_pressed"]

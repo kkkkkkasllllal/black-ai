@@ -99,7 +99,7 @@ func get_interact_prompt() -> String:
 	var tier: Dictionary = GameState.get_affection_tier(character_id)
 	var tier_name: String = str(tier.get("name", "初见"))
 	var suffix: String = " [里世界态]" if is_in_overflow_form() else ""
-	return "[E] 与【%s】对话 / 送显卡（好感 %d%% · %s）%s" % [_display_name, aff, tier_name, suffix]
+	return "[E] 对话/拔刀【%s】· 左键先手（好感 %d%% · %s）%s" % [_display_name, aff, tier_name, suffix]
 
 
 func refresh_visual_state() -> void:

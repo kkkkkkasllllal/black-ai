@@ -49,7 +49,7 @@ theme_override_constants/separation = 12
 
 [node name="EnterExploreButton" type="Button" parent="Margin/VBox/Buttons"]
 layout_mode = 2
-text = "▶ 进入探索与战斗原型（M2–M5 圣坛·对话·回合制战斗）"
+text = "▶ 进入探索与战斗原型（M2–M6 圣坛·Boss·并发助战）"
 
 [node name="TestGpuButton" type="Button" parent="Margin/VBox/Buttons"]
 layout_mode = 2

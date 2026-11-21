@@ -313,7 +313,7 @@ class Validator:
             if loaded is not None:
                 parsed[jf.name] = loaded
 
-        required_files = ["config.json", "items.json", "characters.json", "monsters.json", "endings.json", "skills.json"]
+        required_files = ["config.json", "items.json", "characters.json", "monsters.json", "endings.json", "skills.json", "bosses.json"]
         for req in required_files:
             if req not in parsed:
                 self.err("data/ 缺少核心数据文件: {}".format(req))
@@ -326,20 +326,23 @@ class Validator:
         monsters = parsed["monsters.json"]
         endings = parsed["endings.json"]
         skills = parsed["skills.json"]
+        bosses = parsed["bosses.json"]
 
         region_ids, status_ids = self._validate_config(config)
         char_ids = self._validate_characters(characters, region_ids)
         item_ids, item_category_map = self._validate_items(items, char_ids, status_ids)
         player_skill_ids, enemy_skill_ids = self._validate_skills(skills, status_ids, item_ids)
         self._validate_monsters(monsters, region_ids, item_ids, status_ids, enemy_skill_ids)
+        self._validate_bosses(bosses, char_ids, item_ids, status_ids)
         self._validate_endings(endings)
         self._validate_config_item_refs(config, item_ids, item_category_map)
 
-        self.ok("JSON 数据校验完成：{} 个数据文件，物品 {} / 角色 {} / 怪物 {} / 技能 {} / 结局 {}".format(
+        self.ok("JSON 数据校验完成：{} 个数据文件，物品 {} / 角色 {} / 怪物 {} / Boss {} / 技能 {} / 结局 {}".format(
             len(parsed),
             len(item_ids),
             len(char_ids),
             len(monsters.get("monsters", [])),
+            len(bosses.get("bosses", [])),
             len(player_skill_ids) + len(enemy_skill_ids),
             len(endings.get("endings", [])),
         ))
@@ -794,6 +797,72 @@ class Validator:
             for drop in mon.get("drops", []):
                 if not isinstance(drop, dict) or drop.get("item") not in item_ids:
                     self.err("{} ({}) drops 引用了未知物品: {!r}".format(loc, mid, drop))
+
+    def _validate_bosses(
+        self,
+        data: Dict[str, Any],
+        char_ids: Set[str],
+        item_ids: Set[str],
+        status_ids: Set[str],
+    ) -> None:
+        entries = data.get("bosses")
+        if not isinstance(entries, list) or not entries:
+            self.err("bosses.json 缺少非空 bosses 数组")
+            return
+        seen: Set[str] = set()
+        for idx, boss in enumerate(entries):
+            loc = "bosses.json bosses[{}]".format(idx)
+            if not isinstance(boss, dict):
+                self.err("{} 必须为对象".format(loc))
+                continue
+            bid = boss.get("id")
+            if not isinstance(bid, str) or bid not in char_ids:
+                self.err("{} id 引用了未知角色: {!r}".format(loc, bid))
+                continue
+            if bid in seen:
+                self.err("{} id 重复: {}".format(loc, bid))
+                continue
+            seen.add(bid)
+
+            for req_str in ["title", "normal_last_words", "overflow_last_words"]:
+                if not isinstance(boss.get(req_str), str) or not boss[req_str].strip():
+                    self.err("{} ({}) 缺少 {}".format(loc, bid, req_str))
+
+            if not isinstance(boss.get("weight_shards"), int) or boss["weight_shards"] < 0:
+                self.err("{} ({}) weight_shards 必须为非负整数".format(loc, bid))
+
+            for weak in boss.get("weaknesses", []):
+                if weak not in item_ids and weak not in status_ids:
+                    self.err("{} ({}) weaknesses 引用了未知物品/状态: {!r}".format(loc, bid, weak))
+
+            for imm in boss.get("immunities", []):
+                if imm not in status_ids:
+                    self.err("{} ({}) immunities 引用了未知状态: {!r}".format(loc, bid, imm))
+
+            for drop_key in ["normal_drops", "overflow_drops"]:
+                drops = boss.get(drop_key)
+                if not isinstance(drops, list) or not drops:
+                    self.err("{} ({}) 缺少非空 {}".format(loc, bid, drop_key))
+                else:
+                    for item_ref in drops:
+                        if item_ref not in item_ids:
+                            self.err("{} ({}) {} 引用了未知物品: {!r}".format(loc, bid, drop_key, item_ref))
+
+            assist = boss.get("assist_skill")
+            if not isinstance(assist, dict):
+                self.err("{} ({}) 缺少 assist_skill 对象".format(loc, bid))
+            else:
+                for req_str in ["name", "line"]:
+                    if not isinstance(assist.get(req_str), str) or not assist[req_str].strip():
+                        self.err("{} ({}) assist_skill 缺少 {}".format(loc, bid, req_str))
+                if not isinstance(assist.get("token_cost"), int) or assist["token_cost"] < 1:
+                    self.err("{} ({}) assist_skill.token_cost 必须为正整数".format(loc, bid))
+                if not isinstance(assist.get("power_mult"), (int, float)) or assist["power_mult"] <= 0:
+                    self.err("{} ({}) assist_skill.power_mult 必须为正数".format(loc, bid))
+
+        missing_heroines = REQUIRED_CORE_HEROINES - seen
+        if missing_heroines:
+            self.err("bosses.json 缺少核心 AI 娘 Boss 配置: {}".format(", ".join(sorted(missing_heroines))))
 
     def _validate_endings(self, data: Dict[str, Any]) -> None:
         entries = data.get("endings")

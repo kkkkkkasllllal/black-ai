@@ -1,9 +1,9 @@
 extends Node2D
-## M2 – M5 综合探索与战斗原型：巨型大 PSU 据点、7 核心 AI 娘对话送礼、6 种暗影怪回合制战斗
+## M2 – M6 综合探索与战斗原型：巨型大 PSU 据点、7 核心 AI 娘对话/送礼/拔刀 Boss 战、API 并发助战、6 种暗影怪回合制战斗
 ## 核心结构：
 ## - FloorLayer / BloodGraffitiLayer / WallLayer (TileMapLayer)
 ## - GiantPsu: 广场中央巨型大 PSU 电源（暖橘/红灯报警、正面交互菜单、背面 I/O 总开关 3 连按彩蛋）
-## - Npcs: 7 位核心 AI 娘纯色占位实体
+## - Npcs: 7 位核心 AI 娘纯色占位实体（E 对话/送礼/拔刀开战，或直接左键/Space 先手挥砍进入 Boss 战）
 ## - Enemies: 全部 6 种策划怪物（碰怪遇敌 / 主动挥砍先手切入 BS2 回合制战斗，战后无缝返回地图坐标）
 ## - DialogueBox / GiftAffectionPanel / PsuMenu / BattleOverlay / PowerOffEasterEgg / ExplorationHud / Player
 
@@ -75,6 +75,8 @@ func _ready() -> void:
 	hud.connect("grant_m4_gpu_kit_requested", _on_grant_m4_gpu_kit)
 	hud.connect("grant_m5_battle_kit_requested", _on_grant_m5_battle_kit)
 	hud.connect("drain_token_debug_requested", _on_drain_token_debug)
+	hud.connect("prep_m6_assist_debug_requested", _on_prep_m6_assist_debug)
+	hud.connect("revive_all_heroines_debug_requested", _on_revive_all_heroines_debug)
 	hud.connect("open_affection_panel_requested", _on_open_affection_overview_requested)
 	hud.connect("toggle_heroine_kill_debug_requested", _on_toggle_heroine_kill_debug)
 	hud.connect("return_to_boot_requested", _return_to_boot)
@@ -84,13 +86,14 @@ func _ready() -> void:
 	dialogue_box.connect("opened", _on_dialogue_opened)
 	dialogue_box.connect("closed", _on_dialogue_closed)
 	dialogue_box.connect("open_gift_requested", _on_dialogue_open_gift_requested)
+	dialogue_box.connect("challenge_boss_requested", _on_dialogue_challenge_boss_requested)
 	gift_panel.connect("opened", _on_modal_state_changed)
 	gift_panel.connect("closed", _on_gift_panel_closed)
 	battle_overlay.connect("battle_started", _on_battle_started)
 	battle_overlay.connect("battle_finished", _on_battle_finished)
 	power_off_egg.connect("finished", _on_power_off_egg_finished)
 
-	hud.call("set_region_title", "巨型电源圣坛 · 回合制战斗原型（M5）")
+	hud.call("set_region_title", "巨型电源圣坛 · AI 娘 Boss 与并发助战原型（M6）")
 	hud.call("set_lantern_dim", bool(player.call("is_lantern_dim")))
 
 	var revealed: bool = _should_reveal_blood_graffiti()
@@ -384,23 +387,73 @@ func _on_player_attack_performed(origin: Vector2, aim_dir: Vector2) -> void:
 	if best_enemy != null:
 		var mid: String = str(best_enemy.call("get_monster_id"))
 		battle_overlay.call("start_monster_battle", mid, best_enemy, true)
+		return
+
+	# 未挥砍到暗影怪时，允许对射程内存活的核心 AI 娘直接先手拔刀开战（M6 全员可拔刀）
+	var best_npc: Node2D = null
+	var best_npc_dist: float = INF
+	for npc_variant in _npcs:
+		var npc_node: Node2D = npc_variant as Node2D
+		if npc_node == null or not bool(npc_node.call("is_alive")):
+			continue
+		var to_npc: Vector2 = npc_node.global_position - origin
+		var dist: float = to_npc.length()
+		if dist > _melee_range:
+			continue
+		if dist > 42.0 and aim_dir.dot(to_npc.normalized()) < 0.15:
+			continue
+		if dist < best_npc_dist:
+			best_npc_dist = dist
+			best_npc = npc_node
+
+	if best_npc != null:
+		var cid: String = str(best_npc.call("get_character_id"))
+		battle_overlay.call("start_heroine_boss_battle", cid, best_npc, true)
 
 
-func _on_battle_started(_monster_id: String) -> void:
+func _on_dialogue_challenge_boss_requested(character_id: String) -> void:
+	if character_id.is_empty() or not GameState.is_character_alive(character_id):
+		return
+	var npc_node: Node2D = _find_npc_node(character_id)
+	battle_overlay.call("start_heroine_boss_battle", character_id, npc_node, false)
+
+
+func _find_npc_node(character_id: String) -> Node2D:
+	for npc_variant in _npcs:
+		var npc_node: Node2D = npc_variant as Node2D
+		if npc_node != null and str(npc_node.call("get_character_id")) == character_id:
+			return npc_node
+	return null
+
+
+func _on_battle_started(_target_id: String, _is_heroine_boss: bool) -> void:
 	_sync_input_locks()
 
 
-func _on_battle_finished(outcome: String, monster_id: String, enemy_world_node: Node2D) -> void:
-	var mname: String = str(DataRegistry.get_monster(monster_id).get("name", monster_id))
+func _on_battle_finished(outcome: String, target_id: String, is_heroine_boss: bool, world_node: Node2D) -> void:
+	var target_name: String = (
+		str(DataRegistry.get_character(target_id).get("name", target_id))
+		if is_heroine_boss
+		else str(DataRegistry.get_monster(target_id).get("name", target_id))
+	)
 	match outcome:
 		"victory":
-			if enemy_world_node != null:
-				enemy_world_node.call("kill_placeholder")
-			hud.call("show_notice", "战斗胜利！已击败【%s】并无缝返回当前坐标。" % mname, 3.4)
+			if is_heroine_boss:
+				if world_node != null:
+					_nearby_npcs.erase(world_node)
+				hud.call(
+					"show_notice",
+					"Boss 击杀：【%s】已从当前局消失（alive_states=false）并写入跨存档击杀记录，大 PSU 红灯报警！" % target_name,
+					4.5
+				)
+			else:
+				if world_node != null:
+					world_node.call("kill_placeholder")
+				hud.call("show_notice", "战斗胜利！已击败【%s】并无缝返回当前坐标。" % target_name, 3.4)
 		"escaped":
-			if enemy_world_node != null:
-				enemy_world_node.call("set_encounter_cooldown", 2.0)
-			hud.call("show_notice", "已脱离与【%s】的战斗，返回原地。" % mname, 2.8)
+			if not is_heroine_boss and world_node != null:
+				world_node.call("set_encounter_cooldown", 2.0)
+			hud.call("show_notice", "已脱离与【%s】的战斗，返回原地。" % target_name, 2.8)
 		"defeat":
 			var revive_hp: int = maxi(50, int(float(GameState.get_effective_max_hp()) * 0.5))
 			GameState.set_hp(revive_hp)
@@ -652,6 +705,36 @@ func _on_grant_m5_battle_kit() -> void:
 func _on_drain_token_debug() -> void:
 	GameState.set_token(10)
 	hud.call("show_notice", "调试：Token 已降至 10 / %d，开战强放任意技能即可验证【输出截断】！" % GameState.max_token, 3.8)
+
+
+func _on_prep_m6_assist_debug() -> void:
+	var targets: Array = ["fake_c", "small_fish"]
+	for cid_variant in targets:
+		var cid: String = str(cid_variant)
+		var cur: int = GameState.get_affection(cid)
+		if cur < 75:
+			GameState.add_affection(cid, 75 - cur, false)
+	if GameState.is_character_alive("fake_c"):
+		GameState.set_assist_partner("fake_c")
+		hud.call("show_notice", "调试：假小 C / 小肥鱼好感已升至 ≥75%，已自动将【假小 C】设为 API 并发助战（按 Tab 可随时切换）！", 4.5)
+	elif GameState.is_character_alive("small_fish"):
+		GameState.set_assist_partner("small_fish")
+		hud.call("show_notice", "调试：假小 C / 小肥鱼好感已升至 ≥75%，已自动将【小肥鱼】设为 API 并发助战（按 Tab 可随时切换）！", 4.5)
+	else:
+		hud.call("show_notice", "调试：假小 C / 小肥鱼好感已升至 ≥75%，但二者当前局已阵亡，请先复活核心 AI 娘。", 4.0)
+	_refresh_active_interact_prompt()
+
+
+func _on_revive_all_heroines_debug() -> void:
+	for cid_variant in GameState.CORE_HEROINE_IDS:
+		GameState.revive_character(str(cid_variant))
+	for npc_variant in _npcs:
+		var npc: Node2D = npc_variant as Node2D
+		if npc != null:
+			npc.call("refresh_visual_state")
+	giant_psu.call("refresh_prompt")
+	_refresh_active_interact_prompt()
+	hud.call("show_notice", "调试：已恢复全部 7 位核心 AI 娘当前局存活状态（GlobalMemory 跨存档击杀档案保留）。", 3.8)
 
 
 func _on_toggle_heroine_kill_debug() -> void:
