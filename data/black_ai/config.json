@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "_doc": "全局平衡参数与世界常量。Context = 上下文稳定度（100 = 完全稳定，越低越接近溢出/里世界）。",
+  "player": {
+    "base_hp": 100,
+    "max_hp_cap": 400,
+    "hp_upgrade_step": 20,
+    "hp_upgrade_base_cost": 5,
+    "hp_upgrade_cost_growth": 3,
+    "base_token": 100,
+    "base_atk": 10,
+    "base_def": 0,
+    "base_spd": 10
+  },
+  "context": {
+    "max": 100,
+    "initial": 100,
+    "psu_restore_to": 80,
+    "overflow_threshold": 30,
+    "critical_threshold": 10
+  },
+  "affection": {
+    "min": 0,
+    "normal_max": 100,
+    "overflow_max": 200,
+    "tiers": [
+      { "id": "stranger", "name": "初见", "min": 0, "max": 29 },
+      { "id": "ambiguous", "name": "暧昧", "min": 30, "max": 69 },
+      { "id": "lover", "name": "恋人", "min": 70, "max": 99 },
+      { "id": "full", "name": "满好感", "min": 100, "max": 100 },
+      { "id": "obsessed", "name": "偏执溢出", "min": 101, "max": 200 }
+    ],
+    "first_vote_bonus": 15,
+    "assist_min": 70
+  },
+  "combat": {
+    "min_damage": 1,
+    "defend_damage_mult": 0.5,
+    "defend_blocks_crit": true,
+    "crit_damage_mult": 1.5,
+    "token_regen_per_turn": 10,
+    "token_truncate_power_mult": 0.5
+  },
+  "exploration": {
+    "tile_size": 48,
+    "move_speed": 220.0,
+    "move_accel": 1600.0,
+    "move_friction": 1800.0,
+    "lantern_bright_energy": 1.95,
+    "lantern_bright_scale": 3.3,
+    "lantern_dim_energy": 0.6,
+    "lantern_dim_scale": 1.95,
+    "halo_bright_energy": 0.6,
+    "halo_bright_scale": 1.35,
+    "halo_dim_energy": 0.25,
+    "halo_dim_scale": 0.9,
+    "overflow_jitter_px": 2.4,
+    "critical_jitter_px": 4.8,
+    "debug_context_step": 15
+  },
+  "psu": {
+    "back_switch_max_presses": 3,
+    "easter_egg_duration": 5.0,
+    "melee_attack_range": 78.0,
+    "melee_attack_cooldown": 0.30,
+    "kill_context_cost": 8
+  },
+  "statuses": ["overheat", "lag", "short_circuit", "lock", "frostbite", "crash", "throttled", "leak"],
+  "regions": [
+    { "id": "psu_altar", "name": "巨型电源圣坛" },
+    { "id": "draft_abyss", "name": "空白废稿渊" },
+    { "id": "redline_gallery", "name": "红线诗廊" },
+    { "id": "fan_forest", "name": "焦黑风扇林 · 虚空疯茶会" },
+    { "id": "sunken_pool_404", "name": "404 沉没水池" },
+    { "id": "north_sanctum", "name": "北翼终盘圣殿" }
+  ],
+  "starting_loadout": {
+    "equipment": { "weapon": "", "case": "cardboard_box", "cooler": "", "system_prompt": "" },
+    "inventory": {},
+    "prologue_pickups": ["ram_knife", "gpu_580"]
+  }
+}

@@ -1,9 +1,12 @@
-# Godot 4 cache / imports
-.godot/
-/android/
-*.translation
+# RPG Maker MV runtime saves & exports
+save/
+www/
 
-# Exports
+# Legacy Godot archive cache
+.godot/
+archive_godot/.godot/
+
+# Exports / builds
 /build/
 /export/
 *.pck
