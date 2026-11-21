@@ -12,7 +12,7 @@ const EXPLORE_PROTOTYPE_SCENE: String = "res://scenes/world/ExplorePrototype.tsc
 func _ready() -> void:
 	_refresh_summary()
 	enter_explore_button.grab_focus()
-	_append_log("自检就绪。点击「进入 M2：2D 上帝视角探索原型」（或按 Enter）开始 M2 试玩。")
+	_append_log("自检就绪。点击「进入探索原型（M2 + M3 巨型电源圣坛）」（或按 Enter）开始试玩。")
 
 
 func _refresh_summary() -> void:
@@ -65,11 +65,12 @@ func _refresh_summary() -> void:
 		],
 		"",
 		"[b]GlobalMemory 持久化记忆[/b]（%s）" % GlobalMemory.get_absolute_path(),
-		"  · 周目：%d | 开局第一名：%s | SL 次数：%d | 过往击杀：%s | 主菜单形态：%s" % [
+		"  · 周目：%d | 开局第一名：%s | SL 次数：%d | 过往击杀：%s | 已解锁结局：%s | 主菜单形态：%s" % [
 			GlobalMemory.cycle_count,
 			GlobalMemory.first_vote if not GlobalMemory.first_vote.is_empty() else "未投票",
 			GlobalMemory.sl_count,
 			", ".join(GlobalMemory.killed_in_past_saves) if not GlobalMemory.killed_in_past_saves.is_empty() else "无",
+			", ".join(GlobalMemory.unlocked_endings) if not GlobalMemory.unlocked_endings.is_empty() else "无",
 			GlobalMemory.get_main_menu_variant(),
 		],
 	])

@@ -1,8 +1,11 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/world/ExplorePrototype.gd" id="1_explore"]
 [ext_resource type="PackedScene" path="res://scenes/world/Player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ExplorationHud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/world/GiantPsu.tscn" id="4_psu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PsuMenu.tscn" id="5_psu_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PowerOffEasterEgg.tscn" id="6_egg"]
 
 [node name="ExplorePrototype" type="Node2D"]
 script = ExtResource("1_explore")
@@ -19,9 +22,17 @@ z_index = 2
 
 [node name="Obstacles" type="Node2D" parent="."]
 
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="GiantPsu" parent="." instance=ExtResource("4_psu")]
+
 [node name="CanvasModulate" type="CanvasModulate" parent="."]
 color = Color(0.15, 0.16, 0.2, 1)
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 
 [node name="ExplorationHud" parent="." instance=ExtResource("3_hud")]
+
+[node name="PsuMenu" parent="." instance=ExtResource("5_psu_menu")]
+
+[node name="PowerOffEasterEgg" parent="." instance=ExtResource("6_egg")]

@@ -1,8 +1,10 @@
 extends CanvasLayer
-## 探索场景 HUD + 上下文溢出暗角叠加层 + Esc 菜单（M2 起通用）
+## 探索场景 HUD + 上下文溢出暗角叠加层 + 交互提示条 + Esc 菜单（M2 / M3 通用）
 
 signal pause_toggled(is_paused: bool)
 signal toggle_context_debug_requested
+signal grant_m3_debug_kit_requested
+signal toggle_heroine_kill_debug_requested
 signal return_to_boot_requested
 
 @onready var overflow_vignette: ColorRect = $OverflowVignette
@@ -12,20 +14,27 @@ signal return_to_boot_requested
 @onready var context_bar: ProgressBar = $StatusPanel/Margin/VBox/ContextBar
 @onready var lantern_label: Label = $StatusPanel/Margin/VBox/LanternLabel
 @onready var notice_label: Label = $StatusPanel/Margin/VBox/NoticeLabel
+@onready var interact_prompt_panel: PanelContainer = $InteractPromptPanel
+@onready var interact_prompt_label: Label = $InteractPromptPanel/Margin/InteractPromptLabel
 @onready var pause_overlay: ColorRect = $PauseOverlay
 
 var _vignette_intensity: float = 0.0
 var _is_paused: bool = false
+var _input_locked: bool = false
 var _notice_timer: float = 0.0
 var _lantern_is_dim: bool = false
 
 
 func _ready() -> void:
 	pause_overlay.visible = false
+	interact_prompt_panel.visible = false
 	notice_label.text = ""
 	GameState.hp_changed.connect(_on_hp_or_token_changed)
 	GameState.token_changed.connect(_on_hp_or_token_changed)
 	GameState.context_changed.connect(_on_context_changed)
+	GameState.shards_changed.connect(_on_shards_changed)
+	GameState.equipment_changed.connect(_on_equipment_changed)
+	GameState.save_loaded.connect(_on_save_loaded)
 	_refresh_status()
 	_sync_vignette_immediate()
 
@@ -42,6 +51,8 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _input_locked:
+		return
 	if event.is_action_pressed("menu"):
 		set_paused(not _is_paused)
 		get_viewport().set_input_as_handled()
@@ -56,7 +67,18 @@ func set_lantern_dim(is_dim: bool) -> void:
 	_refresh_lantern_label()
 
 
-func show_notice(message: String, duration: float = 2.6) -> void:
+func set_interact_prompt(prompt_text: String) -> void:
+	interact_prompt_label.text = prompt_text
+	interact_prompt_panel.visible = not prompt_text.is_empty()
+
+
+func set_input_locked(locked: bool) -> void:
+	_input_locked = locked
+	if locked and _is_paused:
+		set_paused(false)
+
+
+func show_notice(message: String, duration: float = 2.8) -> void:
 	notice_label.text = message
 	_notice_timer = duration
 
@@ -74,11 +96,12 @@ func is_paused() -> bool:
 
 
 func _refresh_status() -> void:
-	stats_label.text = "HP %d / %d   |   Token %d / %d" % [
+	stats_label.text = "HP %d / %d  |  Token %d / %d  |  碎片 %d" % [
 		GameState.hp,
 		GameState.get_effective_max_hp(),
 		GameState.token,
 		GameState.max_token,
+		GameState.weight_shards,
 	]
 	context_bar.max_value = float(GameState.max_context)
 	context_bar.value = float(GameState.context)
@@ -139,12 +162,32 @@ func _on_context_changed(_current: int, _maximum: int, _is_overflow: bool) -> vo
 	_refresh_status()
 
 
+func _on_shards_changed(_amount: int) -> void:
+	_refresh_status()
+
+
+func _on_equipment_changed(_slot: String, _item_id: String) -> void:
+	_refresh_status()
+
+
+func _on_save_loaded(_slot: int) -> void:
+	_refresh_status()
+
+
 func _on_resume_button_pressed() -> void:
 	set_paused(false)
 
 
 func _on_toggle_context_button_pressed() -> void:
 	toggle_context_debug_requested.emit()
+
+
+func _on_grant_m3_kit_button_pressed() -> void:
+	grant_m3_debug_kit_requested.emit()
+
+
+func _on_toggle_heroine_kill_button_pressed() -> void:
+	toggle_heroine_kill_debug_requested.emit()
 
 
 func _on_return_boot_button_pressed() -> void:

@@ -25,8 +25,8 @@ mouse_filter = 2
 [node name="StatusPanel" type="PanelContainer" parent="."]
 offset_left = 18.0
 offset_top = 16.0
-offset_right = 376.0
-offset_bottom = 178.0
+offset_right = 432.0
+offset_bottom = 184.0
 mouse_filter = 2
 
 [node name="Margin" type="MarginContainer" parent="StatusPanel"]
@@ -42,11 +42,11 @@ theme_override_constants/separation = 5
 
 [node name="RegionLabel" type="Label" parent="StatusPanel/Margin/VBox"]
 layout_mode = 2
-text = "测试箱庭 · 探索原型（M2）"
+text = "巨型电源圣坛 · 据点原型（M3）"
 
 [node name="StatsLabel" type="Label" parent="StatusPanel/Margin/VBox"]
 layout_mode = 2
-text = "HP 100 / 100   |   Token 100 / 100"
+text = "HP 100 / 100  |  Token 100 / 100  |  碎片 0"
 
 [node name="ContextLabel" type="Label" parent="StatusPanel/Margin/VBox"]
 layout_mode = 2
@@ -65,7 +65,36 @@ text = "提灯：常亮  [按 F 调暗]"
 [node name="NoticeLabel" type="Label" parent="StatusPanel/Margin/VBox"]
 layout_mode = 2
 modulate = Color(1, 0.78, 0.56, 1)
+autowrap_mode = 2
 text = ""
+
+[node name="InteractPromptPanel" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -310.0
+offset_top = -108.0
+offset_right = 310.0
+offset_bottom = -64.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="InteractPromptPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="InteractPromptLabel" type="Label" parent="InteractPromptPanel/Margin"]
+layout_mode = 2
+modulate = Color(1, 0.9, 0.55, 1)
+horizontal_alignment = 1
+text = "[E] 交互"
 
 [node name="HintsPanel" type="PanelContainer" parent="."]
 anchors_preset = 2
@@ -73,7 +102,7 @@ anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 18.0
 offset_top = -52.0
-offset_right = 880.0
+offset_right = 1120.0
 offset_bottom = -16.0
 grow_vertical = 0
 mouse_filter = 2
@@ -87,7 +116,7 @@ theme_override_constants/margin_bottom = 6
 
 [node name="HintLabel" type="Label" parent="HintsPanel/Margin"]
 layout_mode = 2
-text = "WASD/方向键 移动  |  鼠标 旋转提灯  |  F 调暗提灯  |  1/2（或 [ / ]）调上下文  |  3 切换溢出  |  Esc 菜单"
+text = "WASD 移动 | 鼠标 提灯 | F 调暗 | E 电源/背面开关交互 | 左键/Space 清理暗影怪 | 1/2/3 调上下文 | Esc 菜单"
 
 [node name="PauseOverlay" type="ColorRect" parent="."]
 visible = false
@@ -107,7 +136,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="MenuPanel" type="PanelContainer" parent="PauseOverlay/Center"]
-custom_minimum_size = Vector2(340, 0)
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 
 [node name="Margin" type="MarginContainer" parent="PauseOverlay/Center/MenuPanel"]
@@ -123,7 +152,7 @@ theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
 layout_mode = 2
-text = "《BLACK AI》M2 探索原型菜单"
+text = "《BLACK AI》探索与据点菜单"
 horizontal_alignment = 1
 
 [node name="ResumeButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
@@ -134,10 +163,20 @@ text = "继续探索（Esc）"
 layout_mode = 2
 text = "调试：一键切换上下文溢出（15% / 80%）"
 
+[node name="GrantM3KitButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
+layout_mode = 2
+text = "调试：发放 M3 测试碎片(+50)与示例装备"
+
+[node name="ToggleHeroineKillButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
+layout_mode = 2
+text = "调试：切换核心角色击杀态（测 PSU 红灯报警）"
+
 [node name="ReturnBootButton" type="Button" parent="PauseOverlay/Center/MenuPanel/Margin/VBox"]
 layout_mode = 2
 text = "返回 M1 自检面板"
 
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ResumeButton" to="." method="_on_resume_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ToggleContextButton" to="." method="_on_toggle_context_button_pressed"]
+[connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/GrantM3KitButton" to="." method="_on_grant_m3_kit_button_pressed"]
+[connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ToggleHeroineKillButton" to="." method="_on_toggle_heroine_kill_button_pressed"]
 [connection signal="pressed" from="PauseOverlay/Center/MenuPanel/Margin/VBox/ReturnBootButton" to="." method="_on_return_boot_button_pressed"]

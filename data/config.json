@@ -58,6 +58,13 @@
     "critical_jitter_px": 4.8,
     "debug_context_step": 15
   },
+  "psu": {
+    "back_switch_max_presses": 3,
+    "easter_egg_duration": 5.0,
+    "melee_attack_range": 78.0,
+    "melee_attack_cooldown": 0.30,
+    "kill_context_cost": 8
+  },
   "statuses": ["overheat", "lag", "short_circuit", "lock", "frostbite", "crash", "throttled", "leak"],
   "regions": [
     { "id": "psu_altar", "name": "巨型电源圣坛" },

@@ -434,6 +434,19 @@ class Validator:
                 if not isinstance(exploration.get(key), (int, float)):
                     self.err("config.json exploration.{} 缺失或非数字".format(key))
 
+        psu = config.get("psu")
+        if not isinstance(psu, dict):
+            self.err("config.json 缺少 psu 对象")
+        else:
+            for key in [
+                "back_switch_max_presses",
+                "easter_egg_duration",
+                "melee_attack_range",
+                "melee_attack_cooldown",
+            ]:
+                if not isinstance(psu.get(key), (int, float)):
+                    self.err("config.json psu.{} 缺失或非数字".format(key))
+
         return region_ids, status_ids
 
     def _validate_characters(self, data: Dict[str, Any], region_ids: Set[str]) -> Set[str]:

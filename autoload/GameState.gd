@@ -16,6 +16,7 @@ signal inventory_changed(item_id: String, count: int)
 signal affection_changed(character_id: String, old_value: int, new_value: int, tier_id: String)
 signal character_killed(character_id: String)
 signal world_enemies_respawn_requested(reason: String)
+signal save_loaded(slot: int)
 signal game_state_reset
 
 const SAVE_DIR: String = "user://saves/"
@@ -319,11 +320,11 @@ func get_hp_upgrade_cost() -> int:
 	return base_cost + hp_upgrade_count * growth
 
 
-## 在大 PSU 电源消耗碎片提升基础 HP 上限（上限 400）。
+## 在大 PSU 电源消耗碎片提升基础 HP。有效 HP 已封顶时不可升级。
 func upgrade_base_hp() -> bool:
 	var cap: int = DataRegistry.get_config_int("player.max_hp_cap", 400)
 	var step: int = DataRegistry.get_config_int("player.hp_upgrade_step", 20)
-	if base_max_hp >= cap:
+	if base_max_hp >= cap or get_effective_max_hp() >= cap:
 		return false
 	var cost: int = get_hp_upgrade_cost()
 	if not spend_weight_shards(cost):
@@ -442,6 +443,63 @@ func repair_glass_case() -> bool:
 	is_case_broken = false
 	equipment_changed.emit("case", str(equipment.get("case", "")))
 	return true
+
+
+## 在探索 / 据点界面使用可非战斗消耗的物品（根据 data/items.json 的 use_effects 结算）。
+## 返回 { ok: bool, summary: String }
+func use_field_item(item_id: String) -> Dictionary:
+	if not has_item(item_id, 1):
+		return { "ok": false, "summary": "背包中没有该物品。" }
+	var item: Dictionary = DataRegistry.get_item(item_id)
+	var usable_variant: Variant = item.get("usable_in", [])
+	var usable_in: Array = usable_variant if usable_variant is Array else []
+	if not usable_in.has("field"):
+		return { "ok": false, "summary": "该物品无法在探索据点直接使用。" }
+
+	var effects_variant: Variant = item.get("use_effects", [])
+	var effects: Array = effects_variant if effects_variant is Array else []
+	if effects.is_empty():
+		return { "ok": false, "summary": "该物品没有可用的探索效果。" }
+
+	var notes: PackedStringArray = PackedStringArray()
+	var applied: bool = false
+	for eff_variant in effects:
+		if not (eff_variant is Dictionary):
+			continue
+		var eff: Dictionary = eff_variant
+		var etype: String = str(eff.get("type", ""))
+		match etype:
+			"restore_context":
+				var amount: int = int(eff.get("amount", 0))
+				if amount > 0:
+					change_context(amount)
+					notes.append("上下文 +%d%%" % amount)
+					applied = true
+			"restore_hp":
+				var amount: int = int(eff.get("amount", 0))
+				if amount > 0:
+					change_hp(amount)
+					notes.append("HP +%d" % amount)
+					applied = true
+			"repair_case":
+				if repair_glass_case():
+					notes.append("侧透玻璃机箱已修补")
+					applied = true
+			"cure_status":
+				notes.append("状态已清理")
+				applied = true
+			"crush_light":
+				notes.append("矿卡闪光照明 %.0f 秒" % float(eff.get("seconds", 2.0)))
+				applied = true
+
+	if not applied:
+		return { "ok": false, "summary": "当前状态下使用无效。" }
+
+	remove_item(item_id, 1)
+	return {
+		"ok": true,
+		"summary": "已使用【%s】：%s" % [DataRegistry.get_item_name(item_id), "，".join(notes)],
+	}
 
 
 # ---------------------------------------------------------------- 好感度与 6 档显卡送礼
@@ -609,6 +667,20 @@ func set_eliminated_character(character_id: String) -> void:
 	eliminated_character = character_id
 
 
+## 判断是否有任意核心 AI 娘已被击杀（用于驱动大 PSU 电源红灯报警与电火花）。
+func has_any_core_heroine_killed() -> bool:
+	for heroine_variant in CORE_HEROINE_IDS:
+		if not is_character_alive(str(heroine_variant)):
+			return true
+	return false
+
+
+## 调试/剧情复活指定角色（仅更新当前存档存活表，不会抹除 GlobalMemory 击杀历史）。
+func revive_character(character_id: String) -> void:
+	if alive_states.has(character_id):
+		alive_states[character_id] = true
+
+
 ## 判断是否达成《空盘 100%》清空条件：7 核心 AI + 5 功能 NPC + 开局淘汰者全部击杀。
 func are_all_targets_eliminated() -> bool:
 	for heroine_variant in CORE_HEROINE_IDS:
@@ -758,7 +830,34 @@ func load_game(slot: int = 1, count_as_sl: bool = true) -> bool:
 	from_save_dict(json.data as Dictionary)
 	if count_as_sl:
 		GlobalMemory.register_sl()
+	save_loaded.emit(slot)
 	return true
+
+
+func has_save_slot(slot: int) -> bool:
+	return FileAccess.file_exists(_get_save_path(slot))
+
+
+## 读取存档槽摘要信息（不改变当前运行时状态，也不计入 SL）。
+func get_save_slot_preview(slot: int) -> Dictionary:
+	var path: String = _get_save_path(slot)
+	if not FileAccess.file_exists(path):
+		return { "exists": false, "slot": slot }
+	var text: String = FileAccess.get_file_as_string(path)
+	var json: JSON = JSON.new()
+	if json.parse(text) != OK or not (json.data is Dictionary):
+		return { "exists": true, "corrupt": true, "slot": slot }
+	var data: Dictionary = json.data as Dictionary
+	return {
+		"exists": true,
+		"corrupt": false,
+		"slot": slot,
+		"hp": int(data.get("hp", 100)),
+		"base_max_hp": int(data.get("base_max_hp", 100)),
+		"context": int(data.get("context", 100)),
+		"weight_shards": int(data.get("weight_shards", 0)),
+		"region": str(data.get("current_region", "psu_altar")),
+	}
 
 
 # ---------------------------------------------------------------- 内部工具

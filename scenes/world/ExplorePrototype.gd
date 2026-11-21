@@ -1,16 +1,16 @@
 extends Node2D
-## M2：2D 上帝视角探索原型测试箱庭
+## M2 + M3：2D 上帝视角探索原型与【巨型大 PSU 电源】据点圣坛
 ## 核心结构：
-## - FloorLayer (TileMapLayer): 黑曜石主板地板与供电走线
-## - BloodGraffitiLayer (TileMapLayer): 隐藏血字层（仅在上下文溢出 <= 30% 时显现）
-## - WallLayer (TileMapLayer): 带 TileSet 碰撞体与实时阴影遮挡的墙体层
-## - Obstacles (Node2D): 独立机柜石柱（含 StaticBody2D + LightOccluder2D），用于验证 360° 实时阴影
-## - CanvasModulate: 暗环境底色，随表/里世界平滑切换
-## - Player + ExplorationHud: 提灯探索与溢出视觉反馈
+## - FloorLayer / BloodGraffitiLayer / WallLayer (TileMapLayer)
+## - GiantPsu: 广场中央两层楼高大 PSU 电源（暖橘/红灯报警、正面交互菜单、背面 I/O 总开关 3 连按彩蛋）
+## - Enemies: 4 只 M3 测试暗影怪占位（挥砍清理掉碎片，PSU【清理缓存】后立刻刷新）
+## - Obstacles: 四角带显式 LightOccluder2D 的机柜柱
+## - PsuMenu / PowerOffEasterEgg / ExplorationHud / Player
 
 const MAP_WIDTH: int = 32
 const MAP_HEIGHT: int = 20
 const BOOT_SCENE_PATH: String = "res://scenes/boot/Boot.tscn"
+const SHADOW_ENEMY_SCENE: PackedScene = preload("res://scenes/world/ShadowEnemyPlaceholder.tscn")
 
 const AMBIENT_STABLE: Color = Color(0.15, 0.16, 0.20, 1.0)
 const AMBIENT_OVERFLOW: Color = Color(0.19, 0.08, 0.10, 1.0)
@@ -19,31 +19,59 @@ const AMBIENT_OVERFLOW: Color = Color(0.19, 0.08, 0.10, 1.0)
 @onready var blood_graffiti_layer: TileMapLayer = $BloodGraffitiLayer
 @onready var wall_layer: TileMapLayer = $WallLayer
 @onready var obstacles_root: Node2D = $Obstacles
+@onready var enemies_root: Node2D = $Enemies
+@onready var giant_psu: StaticBody2D = $GiantPsu
 @onready var canvas_modulate: CanvasModulate = $CanvasModulate
 @onready var player: CharacterBody2D = $Player
 @onready var hud: CanvasLayer = $ExplorationHud
+@onready var psu_menu: CanvasLayer = $PsuMenu
+@onready var power_off_egg: CanvasLayer = $PowerOffEasterEgg
 
 var _tile_size: int = 48
 var _debug_context_step: int = 15
+var _melee_range: float = 78.0
+var _kill_context_cost: int = 8
 var _blood_alpha: float = 0.0
 var _pulse_time: float = 0.0
+var _enemies: Array = []
 
 
 func _ready() -> void:
 	_tile_size = DataRegistry.get_config_int("exploration.tile_size", 48)
 	_debug_context_step = DataRegistry.get_config_int("exploration.debug_context_step", 15)
+	_melee_range = DataRegistry.get_config_float("psu.melee_attack_range", 78.0)
+	_kill_context_cost = DataRegistry.get_config_int("psu.kill_context_cost", 8)
 
+	GameState.current_region = "psu_altar"
 	_build_tilemaps()
 	_build_server_pillars()
+	_place_giant_psu()
+	_spawn_shadow_enemies()
 	_place_player()
 
 	GameState.context_changed.connect(_on_context_changed)
+	GameState.world_enemies_respawn_requested.connect(_on_world_enemies_respawn_requested)
+	GameState.save_loaded.connect(_on_save_loaded)
+
 	player.connect("lantern_mode_changed", _on_lantern_mode_changed)
+	player.connect("attack_performed", _on_player_attack_performed)
+
+	giant_psu.connect("front_interacted", _on_psu_front_interacted)
+	giant_psu.connect("back_switch_step", _on_psu_back_switch_step)
+	giant_psu.connect("power_off_easter_egg_triggered", _on_psu_power_off_easter_egg)
+	giant_psu.connect("interact_prompt_changed", _on_interact_prompt_changed)
+
 	hud.connect("pause_toggled", _on_hud_pause_toggled)
 	hud.connect("toggle_context_debug_requested", _toggle_context_overflow_debug)
+	hud.connect("grant_m3_debug_kit_requested", _on_grant_m3_debug_kit)
+	hud.connect("toggle_heroine_kill_debug_requested", _on_toggle_heroine_kill_debug)
 	hud.connect("return_to_boot_requested", _return_to_boot)
 
-	hud.call("set_region_title", "测试箱庭 · 探索原型（M2）")
+	psu_menu.connect("opened", _on_psu_menu_opened)
+	psu_menu.connect("closed", _on_psu_menu_closed)
+	power_off_egg.connect("finished", _on_power_off_egg_finished)
+
+	hud.call("set_region_title", "巨型电源圣坛 · 据点原型（M3）")
 	hud.call("set_lantern_dim", bool(player.call("is_lantern_dim")))
 
 	var revealed: bool = _should_reveal_blood_graffiti()
@@ -51,6 +79,7 @@ func _ready() -> void:
 	blood_graffiti_layer.visible = revealed
 	blood_graffiti_layer.modulate = Color(1.0, 1.0, 1.0, _blood_alpha)
 	canvas_modulate.color = AMBIENT_OVERFLOW if GameState.is_context_overflow() else AMBIENT_STABLE
+	_sync_input_locks()
 
 
 func _process(delta: float) -> void:
@@ -71,7 +100,7 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if bool(hud.call("is_paused")):
+	if _is_any_modal_active():
 		return
 	if event is InputEventKey:
 		var key_event: InputEventKey = event
@@ -91,7 +120,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 
 
-# ---------------------------------------------------------------- 地图构建（纯 TileMapLayer）
+# ---------------------------------------------------------------- 地图与实体构建（纯 TileMapLayer）
 
 func _build_tilemaps() -> void:
 	var base_tileset: TileSet = PlaceholderFactory.create_exploration_tileset(_tile_size)
@@ -105,10 +134,10 @@ func _build_tilemaps() -> void:
 	wall_layer.clear()
 	blood_graffiti_layer.clear()
 
-	# 1. 地面铺设（黑曜石主板地板 + 中央十字供电铜线）
+	# 1. 地面铺设（黑曜石主板地板 + 从大 PSU 向四周蔓延的供电铜线）
 	for y in range(MAP_HEIGHT):
 		for x in range(MAP_WIDTH):
-			var is_trace: bool = (x == 16 and y >= 2 and y <= 17) or (y == 10 and x >= 2 and x <= 29)
+			var is_trace: bool = (x == 16 and y >= 2 and y <= 17) or (y == 9 and x >= 2 and x <= 29)
 			var floor_tile: Vector2i = PlaceholderFactory.TILE_FLOOR_TRACE if is_trace else PlaceholderFactory.TILE_FLOOR_DARK
 			floor_layer.set_cell(Vector2i(x, y), 0, floor_tile)
 
@@ -120,8 +149,7 @@ func _build_tilemaps() -> void:
 		_set_wall(0, y, y % 4 == 0)
 		_set_wall(MAP_WIDTH - 1, y, y % 4 == 0)
 
-	# 3. 内部隔断墙（形成拐角、暗廊与掩体，用于测试不卡墙角与实时阴影遮挡）
-	# 左上暗室隔墙（宽敞双格入口）
+	# 3. 内部隔断墙（暗室、拐角暗廊与掩体墙）
 	for x in range(1, 9):
 		if x != 4 and x != 5:
 			_set_wall(x, 7, false)
@@ -129,7 +157,6 @@ func _build_tilemaps() -> void:
 		if y != 3 and y != 4:
 			_set_wall(9, y, true)
 
-	# 右上折返暗廊
 	for x in range(22, 31):
 		if x != 25 and x != 26:
 			_set_wall(x, 6, true)
@@ -137,27 +164,23 @@ func _build_tilemaps() -> void:
 		if y != 9 and y != 10:
 			_set_wall(22, y, false)
 
-	# 左下 L 型掩体墙
 	for x in range(4, 10):
 		_set_wall(x, 14, false)
 	for y in range(12, 15):
 		_set_wall(4, y, true)
 
-	# 右下隔断短墙
 	for x in range(23, 28):
 		_set_wall(x, 14, true)
 	_set_wall(27, 15, false)
 	_set_wall(27, 16, false)
 
-	# 4. 上下文溢出隐藏血字 TileMapLayer（表世界不可见，<= 30% 显现）
+	# 4. 上下文溢出隐藏血字 TileMapLayer（环绕大 PSU 四周与暗廊，避开电源底座）
 	var graffiti_spots: Array = [
-		# 出生点周围（一键切溢出后视野内立即可见）
-		[Vector2i(14, 10), PlaceholderFactory.BLOOD_TILE_404],
-		[Vector2i(18, 10), PlaceholderFactory.BLOOD_TILE_580],
-		[Vector2i(16, 8), PlaceholderFactory.BLOOD_TILE_EYE],
-		[Vector2i(15, 12), PlaceholderFactory.BLOOD_TILE_CLAW],
-		[Vector2i(17, 12), PlaceholderFactory.BLOOD_TILE_NULL],
-		# 隔间与暗廊深处（供提灯探索发掘）
+		[Vector2i(13, 9), PlaceholderFactory.BLOOD_TILE_404],
+		[Vector2i(19, 9), PlaceholderFactory.BLOOD_TILE_580],
+		[Vector2i(16, 6), PlaceholderFactory.BLOOD_TILE_EYE],
+		[Vector2i(14, 12), PlaceholderFactory.BLOOD_TILE_CLAW],
+		[Vector2i(18, 12), PlaceholderFactory.BLOOD_TILE_NULL],
 		[Vector2i(3, 3), PlaceholderFactory.BLOOD_TILE_NULL],
 		[Vector2i(5, 3), PlaceholderFactory.BLOOD_TILE_EYE],
 		[Vector2i(2, 5), PlaceholderFactory.BLOOD_TILE_CLAW],
@@ -183,14 +206,12 @@ func _set_wall(x: int, y: int, rack_variant: bool) -> void:
 	wall_layer.set_cell(Vector2i(x, y), 0, tile)
 
 
-## 在广场四角放置带显式 LightOccluder2D 与 StaticBody2D 的独立机柜石柱，
-## 用于直观验收 360° 扇形提灯实时阴影与防卡角绕柱手感。
 func _build_server_pillars() -> void:
 	var pillar_cells: Array = [
-		[Vector2i(13, 7), "机柜柱 A"],
-		[Vector2i(19, 7), "机柜柱 B"],
-		[Vector2i(13, 13), "机柜柱 C"],
-		[Vector2i(19, 13), "机柜柱 D"],
+		[Vector2i(11, 6), "机柜柱 A"],
+		[Vector2i(21, 6), "机柜柱 B"],
+		[Vector2i(11, 13), "机柜柱 C"],
+		[Vector2i(21, 13), "机柜柱 D"],
 	]
 	var size: float = float(_tile_size)
 	var half: float = size * 0.5
@@ -240,11 +261,169 @@ func _build_server_pillars() -> void:
 		obstacles_root.add_child(body)
 
 
+func _place_giant_psu() -> void:
+	giant_psu.position = floor_layer.map_to_local(Vector2i(16, 9))
+
+
+func _spawn_shadow_enemies() -> void:
+	var spawn_specs: Array = [
+		["glitch_ghost", Vector2i(12, 10)],
+		["crawler_404", Vector2i(20, 10)],
+		["slag_golem", Vector2i(6, 4)],
+		["echo_nun", Vector2i(25, 10)],
+	]
+	_enemies.clear()
+	for spec_variant in spawn_specs:
+		if not (spec_variant is Array):
+			continue
+		var spec: Array = spec_variant
+		if spec.size() < 2 or not (spec[1] is Vector2i):
+			continue
+		var monster_id: String = str(spec[0])
+		var cell: Vector2i = spec[1] as Vector2i
+		var enemy_node: StaticBody2D = SHADOW_ENEMY_SCENE.instantiate() as StaticBody2D
+		enemies_root.add_child(enemy_node)
+		enemy_node.call("setup", monster_id, floor_layer.map_to_local(cell))
+		_enemies.append(enemy_node)
+
+
 func _place_player() -> void:
-	player.position = floor_layer.map_to_local(Vector2i(16, 10))
+	player.position = floor_layer.map_to_local(Vector2i(16, 12))
 	var world_bounds: Rect2i = Rect2i(0, 0, MAP_WIDTH * _tile_size, MAP_HEIGHT * _tile_size)
 	player.call("set_camera_limits", world_bounds)
 
+
+# ---------------------------------------------------------------- 暗影怪清理与缓存刷新
+
+func _on_player_attack_performed(origin: Vector2, aim_dir: Vector2) -> void:
+	var hit_names: PackedStringArray = PackedStringArray()
+	var total_shards: int = 0
+	for enemy_variant in _enemies:
+		var enemy_node: Node2D = enemy_variant as Node2D
+		if enemy_node == null or not bool(enemy_node.call("is_alive")):
+			continue
+		var to_enemy: Vector2 = enemy_node.global_position - origin
+		var dist: float = to_enemy.length()
+		if dist > _melee_range:
+			continue
+		# 近身 42px 内全向命中；42..78px 需大致朝向目标
+		if dist > 42.0 and aim_dir.dot(to_enemy.normalized()) < 0.15:
+			continue
+		var reward_variant: Variant = enemy_node.call("kill_placeholder")
+		if reward_variant is Dictionary:
+			var reward: Dictionary = reward_variant
+			var shards: int = int(reward.get("weight_shards", 3))
+			total_shards += shards
+			hit_names.append(str(reward.get("name", "暗影怪")))
+
+	if hit_names.is_empty():
+		return
+
+	GameState.add_weight_shards(total_shards)
+	if _kill_context_cost > 0:
+		GameState.change_context(-_kill_context_cost)
+	var alive_left: int = _count_alive_enemies()
+	hud.call(
+		"show_notice",
+		"清理【%s】！碎片 +%d，上下文 -%d%%（剩余暗影怪 %d/%d）" % [
+			"、".join(hit_names),
+			total_shards,
+			_kill_context_cost,
+			alive_left,
+			_enemies.size(),
+		],
+		3.4
+	)
+
+
+func _on_world_enemies_respawn_requested(_reason: String) -> void:
+	var respawned: int = 0
+	for enemy_variant in _enemies:
+		var enemy_node: Node2D = enemy_variant as Node2D
+		if enemy_node == null:
+			continue
+		if not bool(enemy_node.call("is_alive")):
+			respawned += 1
+		enemy_node.call("respawn_placeholder")
+	hud.call(
+		"show_notice",
+		"大 PSU 已清理缓存：上下文 %d%%，地图暗影怪已立刻重新生成（复活 %d 只，共 %d 只）！" % [
+			GameState.context,
+			respawned,
+			_enemies.size(),
+		],
+		3.6
+	)
+
+
+func _count_alive_enemies() -> int:
+	var count: int = 0
+	for enemy_variant in _enemies:
+		var enemy_node: Node2D = enemy_variant as Node2D
+		if enemy_node != null and bool(enemy_node.call("is_alive")):
+			count += 1
+	return count
+
+
+# ---------------------------------------------------------------- 大 PSU 交互、背面开关彩蛋与模态锁
+
+func _on_psu_front_interacted() -> void:
+	if _is_any_modal_active():
+		return
+	psu_menu.call("open_menu")
+
+
+func _on_psu_back_switch_step(current_presses: int, max_presses: int) -> void:
+	if current_presses == 1:
+		hud.call("show_notice", "你按了一下背面红色物理总开关 [I / O]……大 PSU 风扇猛抖了一下。（1 / %d）" % max_presses, 3.0)
+	else:
+		hud.call("show_notice", "大 PSU 爆出电火花发出刺耳嗡鸣！再按一次就要彻底断电了！（%d / %d）" % [current_presses, max_presses], 3.2)
+
+
+func _on_psu_power_off_easter_egg() -> void:
+	hud.call("set_interact_prompt", "")
+	power_off_egg.call("play_sequence")
+	_sync_input_locks()
+
+
+func _on_power_off_egg_finished(first_unlock: bool) -> void:
+	giant_psu.call("set_power_cut", false)
+	_sync_input_locks()
+	giant_psu.call("refresh_prompt")
+	var suffix: String = "（首次解锁《手贱的代价》！）" if first_unlock else "（《手贱的代价》已收录）"
+	hud.call("show_notice", "大 PSU 电源重新通电——别再乱按背面红色总开关了！%s" % suffix, 4.0)
+
+
+func _on_psu_menu_opened() -> void:
+	_sync_input_locks()
+
+
+func _on_psu_menu_closed() -> void:
+	_sync_input_locks()
+	giant_psu.call("refresh_prompt")
+
+
+func _on_interact_prompt_changed(prompt_text: String) -> void:
+	hud.call("set_interact_prompt", prompt_text)
+
+
+func _is_any_modal_active() -> bool:
+	return (
+		bool(hud.call("is_paused"))
+		or bool(psu_menu.call("is_open"))
+		or bool(power_off_egg.call("is_playing"))
+	)
+
+
+func _sync_input_locks() -> void:
+	var menu_or_egg: bool = bool(psu_menu.call("is_open")) or bool(power_off_egg.call("is_playing"))
+	var any_modal: bool = menu_or_egg or bool(hud.call("is_paused"))
+	player.call("set_movement_enabled", not any_modal)
+	giant_psu.call("set_interaction_enabled", not any_modal)
+	hud.call("set_input_locked", menu_or_egg)
+
+
+# ---------------------------------------------------------------- 上下文、调试与状态回调
 
 func _should_reveal_blood_graffiti() -> bool:
 	return GameState.is_context_overflow() or GameState.has_equipped_effect("reveal_hidden")
@@ -254,15 +433,41 @@ func _toggle_context_overflow_debug() -> void:
 	if GameState.is_context_overflow():
 		var safe_target: int = DataRegistry.get_config_int("context.psu_restore_to", 80)
 		GameState.set_context(safe_target)
-		hud.call("show_notice", "上下文恢复至 %d%% — 表世界稳定，隐藏血字已消退" % safe_target)
+		hud.call("show_notice", "上下文恢复至 %d%% — 表世界稳定，大 PSU 恢复暖橘运行" % safe_target)
 	else:
 		GameState.set_context(15)
-		hud.call("show_notice", "上下文降至 15% — 里世界溢出！地板隐藏血字显现")
+		hud.call("show_notice", "上下文降至 15% — 里世界溢出！大 PSU 亮起红灯报警并爆出电火花")
+
+
+func _on_grant_m3_debug_kit() -> void:
+	GameState.add_weight_shards(50)
+	GameState.add_item("ram_knife", 1)
+	GameState.add_item("integrity_case", 1)
+	GameState.add_item("dual_tower_air", 1)
+	GameState.add_item("prompt_catgirl", 1)
+	GameState.add_item("thermal_paste", 2)
+	GameState.add_item("black_tape", 2)
+	hud.call("show_notice", "调试补给已发放：碎片 +50，内存条刀 / 廉政机箱 / 双塔风冷 / 猫娘提示词 / 硅脂 / 黑胶带", 4.0)
+
+
+func _on_toggle_heroine_kill_debug() -> void:
+	if GameState.is_character_alive("big_fish"):
+		GameState.kill_character("big_fish")
+		hud.call("show_notice", "调试：已标记击杀大肥鱼 → 大 PSU 触发红灯报警与电火花！", 3.4)
+	else:
+		GameState.revive_character("big_fish")
+		hud.call("show_notice", "调试：已恢复大肥鱼当前局存活状态。", 3.0)
+	giant_psu.call("refresh_prompt")
+
+
+func _on_save_loaded(_slot: int) -> void:
+	giant_psu.call("refresh_prompt")
 
 
 func _on_context_changed(current: int, _maximum: int, is_overflow: bool) -> void:
+	giant_psu.call("refresh_prompt")
 	if is_overflow:
-		hud.call("show_notice", "警告：上下文溢出（%d%%），里世界血字浮现！" % current)
+		hud.call("show_notice", "警告：上下文溢出（%d%%），大 PSU 红灯报警、血字浮现！" % current)
 
 
 func _on_lantern_mode_changed(is_dim: bool) -> void:
@@ -270,8 +475,8 @@ func _on_lantern_mode_changed(is_dim: bool) -> void:
 	hud.call("show_notice", "提灯已切换为：%s" % ("调暗（低存在感）" if is_dim else "常亮"), 1.6)
 
 
-func _on_hud_pause_toggled(is_paused: bool) -> void:
-	player.call("set_movement_enabled", not is_paused)
+func _on_hud_pause_toggled(_is_paused: bool) -> void:
+	_sync_input_locks()
 
 
 func _return_to_boot() -> void:

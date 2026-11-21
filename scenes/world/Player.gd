@@ -6,11 +6,13 @@ extends CharacterBody2D
 ## - 上下文溢出时驱动 Camera2D 细微抖动
 
 signal lantern_mode_changed(is_dim: bool)
+signal attack_performed(origin: Vector2, aim_dir: Vector2)
 
 @onready var lantern_pivot: Node2D = $LanternPivot
 @onready var lantern_cone_light: PointLight2D = $LanternPivot/LanternConeLight
 @onready var lantern_halo_light: PointLight2D = $LanternPivot/LanternHaloLight
 @onready var lantern_pointer: ColorRect = $LanternPivot/LanternPointer
+@onready var slash_visual: ColorRect = $LanternPivot/SlashVisual
 @onready var camera: Camera2D = $Camera2D
 
 var _move_speed: float = 220.0
@@ -29,10 +31,13 @@ var _halo_dim_scale: float = 0.9
 
 var _overflow_jitter_px: float = 2.4
 var _critical_jitter_px: float = 4.8
+var _attack_cooldown: float = 0.30
 
 var _is_lantern_dim: bool = false
 var _movement_enabled: bool = true
 var _time_elapsed: float = 0.0
+var _attack_cd_remaining: float = 0.0
+var _slash_visual_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
@@ -62,6 +67,7 @@ func _load_config() -> void:
 
 	_overflow_jitter_px = DataRegistry.get_config_float("exploration.overflow_jitter_px", 2.4)
 	_critical_jitter_px = DataRegistry.get_config_float("exploration.critical_jitter_px", 4.8)
+	_attack_cooldown = DataRegistry.get_config_float("psu.melee_attack_cooldown", 0.30)
 
 
 func _setup_lantern_lights() -> void:
@@ -97,6 +103,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_lantern"):
 		toggle_lantern()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("attack") and _attack_cd_remaining <= 0.0:
+		_perform_melee_slash()
+		get_viewport().set_input_as_handled()
 
 
 func _physics_process(delta: float) -> void:
@@ -114,9 +123,24 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_time_elapsed += delta
+	if _attack_cd_remaining > 0.0:
+		_attack_cd_remaining = maxf(0.0, _attack_cd_remaining - delta)
+	if _slash_visual_timer > 0.0:
+		_slash_visual_timer = maxf(0.0, _slash_visual_timer - delta)
+		var alpha: float = clampf(_slash_visual_timer / 0.14, 0.0, 1.0)
+		slash_visual.visible = _slash_visual_timer > 0.0
+		slash_visual.color = Color(0.95, 0.96, 1.0, alpha * 0.72)
 	_update_lantern_aim()
 	_update_lantern_visuals(delta)
 	_update_camera_jitter(delta)
+
+
+func _perform_melee_slash() -> void:
+	_attack_cd_remaining = _attack_cooldown
+	_slash_visual_timer = 0.14
+	slash_visual.visible = true
+	var aim_dir: Vector2 = Vector2.RIGHT.rotated(lantern_pivot.rotation)
+	attack_performed.emit(global_position, aim_dir)
 
 
 func toggle_lantern() -> void:
