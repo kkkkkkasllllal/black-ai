@@ -19,6 +19,8 @@
     {
       "id": "small_fish",
       "name": "小肥鱼",
+      "map_sprite": "$小肥鱼",
+      "face_index": 2,
       "prototype": "DeepSeek V4.1 Flash",
       "kind": "core_heroine",
       "gift_group": "deepseek",
@@ -32,7 +34,9 @@
     },
     {
       "id": "true_c",
-      "name": "真小 C",
+      "name": "小claude",
+      "map_sprite": "$小claude",
+      "face_index": 0,
       "prototype": "Claude · Sonnet",
       "kind": "core_heroine",
       "gift_group": "general",
@@ -46,7 +50,9 @@
     },
     {
       "id": "fake_c",
-      "name": "假小 C（套壳鱼）",
+      "name": "claude-fish",
+      "map_sprite": "$claude-fish",
+      "face_index": 1,
       "prototype": "蒸馏缝合怪",
       "kind": "core_heroine",
       "gift_group": "deepseek",
@@ -60,7 +66,9 @@
     },
     {
       "id": "astra",
-      "name": "大龙娘",
+      "name": "gpt-astra",
+      "map_sprite": "$gpt-astra",
+      "face_index": 3,
       "prototype": "6.2 Astra",
       "kind": "core_heroine",
       "gift_group": "general",
@@ -101,12 +109,23 @@
       "boss_stats": { "hp": 560, "atk": 32, "def": 12, "spd": 22 }
     },
     {
+      "id": "claude",
+      "name": "Claude",
+      "prototype": "Claude",
+      "kind": "eliminee",
+      "gift_group": "none",
+      "eliminee_candidate": true,
+      "placeholder_color": "#d97757",
+      "home_region": "psu_altar",
+      "tags": ["ai", "electronic"]
+    },
+    {
       "id": "opus",
       "name": "Opus",
       "prototype": "Claude · Opus",
       "kind": "eliminee",
       "gift_group": "general",
-      "eliminee_candidate": true,
+      "eliminee_candidate": false,
       "placeholder_color": "#e8dcc8",
       "catchphrases": ["这一行诗，送给隔栏外的你。", "如果要被删除，至少让我把这句写——"],
       "typewriter": { "style": "poetic", "chars_per_sec": 22, "pre_delay": 0.3 },

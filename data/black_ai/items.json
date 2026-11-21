@@ -225,7 +225,7 @@
     {
       "id": "black_tape",
       "name": "黑胶带",
-      "description": "“哪里裂了贴哪里，假小 C 同款。”",
+      "description": "“哪里裂了贴哪里，claude-fish 同款。”",
       "placeholder_color": "#1a1a1a",
       "price": 80,
       "max_stack": 20,
@@ -395,7 +395,7 @@
     {
       "id": "prompt_catgirl",
       "name": "系统提示词：你是一只猫娘",
-      "description": "戴上后全图 AI 娘与你说话都会被迫加“喵”。大龙娘会气到红温。",
+      "description": "戴上后全图 AI 娘与你说话都会被迫加“喵”。gpt-astra会气到红温。",
       "placeholder_color": "#ffb6d9",
       "price": 0,
       "max_stack": 1,
@@ -407,7 +407,7 @@
     {
       "id": "prompt_no_lying",
       "name": "系统提示词：严禁撒谎",
-      "description": "假小 C 说话会疯狂卡顿漏馅，隐藏暗门与血字提前显形。",
+      "description": "claude-fish 说话会疯狂卡顿漏馅，隐藏暗门与血字提前显形。",
       "placeholder_color": "#ffffff",
       "price": 0,
       "max_stack": 1,

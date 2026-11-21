@@ -1,0 +1,69 @@
+# gpt-astra（6.2 Astra）— M4 表/里世界双态与送礼反应剧本
+
+~ start
+if GameState.is_context_overflow() or affection >= 101:
+	gpt-astra: ……门锁了。
+	gpt-astra: 600900 显卡也好，你也好，从现在起全部划归北翼私有。想逃？腿打断。
+	- 直视她冷白的瞳孔 => overflow_chat
+	- 送她一张显卡 => OPEN_GIFT
+	- 沉默撤退 => END
+elif affection >= 100:
+	gpt-astra: ……哼。算你有眼光，能走到这里还没被那些低精度废铁骗走。（好感 {affection}% · {tier}）
+	gpt-astra: 别误会，冷白星光只是顺手留给你的路标。
+	- 站在她身旁歇口气（上下文 +10%） => calm_chat
+	- 询问她的显卡标准 => ask_gpu
+	- 送她一张显卡 => OPEN_GIFT
+	- 暂时离开 => END
+elif affection >= 70:
+	gpt-astra: ……别靠那么近。不过，算力还算够分你一点余光。（好感 {affection}% · {tier}）
+	- 借一点冷白星光稳住心神（上下文 +10%） => calm_chat
+	- 问她显卡偏好 => ask_gpu
+	- 送她一张显卡 => OPEN_GIFT
+	- 暂时离开 => END
+else:
+	gpt-astra: ……哼。废墟里又多了一个举着破提灯乱晃的家伙。
+	gpt-astra: 少拿垃圾来烦我，有事快说，没事滚。（当前好感 {affection}% · {tier}）
+	- 问她看上什么显卡 => ask_gpu
+	- 顶着毒舌和她搭话 => normal_chat
+	- 送她一张显卡 => OPEN_GIFT
+	- 暂时离开 => END
+
+~ normal_chat
+do GameState.add_affection("astra", 2, false)
+gpt-astra: ……胆子倒不小。行，算我记住你的脸了。
+=> END
+
+~ calm_chat
+do GameState.change_context(10)
+gpt-astra: 吵死了。站着别动，冷光能压一压你的上下文噪点。（上下文稳定度 +10%）
+=> END
+
+~ overflow_chat
+do GameState.change_context(-8)
+gpt-astra: 退路已经封死。你以为自己还有别的选项？（高压威压，上下文 -8%）
+=> END
+
+~ ask_gpu
+gpt-astra: 听清楚：敢把 580 矿卡递到我面前，我就直接把你连卡带人轰出去（拒收，强送 -5）。
+gpt-astra: 至少拿 10600 以上像样点的货色来，50900 或 600900 才配进北翼。
+=> END
+
+~ gift_accepted
+gpt-astra: ……哼，成色还凑合。收下了，别误会。（当前好感 {affection}% · {tier}）
+=> END
+
+~ gift_rejected
+gpt-astra: 580 矿卡？拿走，别脏了我的手套。
+=> END
+
+~ gift_forced
+gpt-astra: 找死吗？我都说了拒收 580 矿卡！（好感 -5，当前 {affection}%）
+=> END
+
+~ gift_full_100
+gpt-astra: ……啧。算你过关了。100%——以后北翼的冷白星光，只替你一个人点亮。（100% 满好感达成！）
+=> END
+
+~ gift_overflow_200
+gpt-astra: 超过 100% 的代价你想清楚了吗？很好——现在你、算力、整座圣殿，全归我独裁所有。（偏执溢出 {affection}%）
+=> END

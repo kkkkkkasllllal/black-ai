@@ -366,8 +366,8 @@ def sync_mv_database() -> None:
     sys_json["startX"] = 12
     sys_json["startY"] = 9
     sys_json["partyMembers"] = [1]
-    sys_json["title1Name"] = "BlackAI_Title_PSU"
-    sys_json["title2Name"] = ""
+    sys_json.setdefault("title1Name", "BlackAI_Title_PSU")
+    sys_json.setdefault("title2Name", "")
     sys_json["optDisplayTp"] = False
     sys_json["optDrawTitle"] = True
     sys_json["optSideView"] = False
@@ -381,9 +381,9 @@ def sync_mv_database() -> None:
     terms["basic"] = ["等级", "Lv", "生命值", "HP", "Token", "TK", "算力", "TP", "经验", "EXP"]
     terms["commands"] = [
         "战斗", "逃跑", "普攻", "防御", "硬件物品", "Token技能",
-        "装备", "状态", "队列", "保存", "结束游戏", "设置",
+        "装备", "状态", "队列", "保存", "结束游戏", "游戏设置",
         "武器", "防具", "重要物品", "装备", "最强装备", "全部卸下",
-        "开始探索", "继续存档", None, "返回标题", "取消", None, "购买", "出售"
+        "开始游戏", "继续游戏", None, "返回标题", "取消", None, "购买", "出售"
     ]
     terms["params"] = ["最大HP", "最大Token", "ATK", "DEF", "MAT", "MDF", "SPD", "LUK", "命中", "闪避"]
     sys_json["terms"] = terms
@@ -808,6 +808,11 @@ def sync_mv_database() -> None:
 
 
 def main() -> None:
+    altar_path = DATA_DIR / "Map002.json"
+    if altar_path.is_file() and "<blackai_native>" in load_json(altar_path).get("note", ""):
+        from build_native_altar import main as build_native
+        build_native()
+        return
     chars = load_json(BA_DATA_DIR / "characters.json")["characters"]
     mons = load_json(BA_DATA_DIR / "monsters.json")["monsters"]
     build_tilesets_images()

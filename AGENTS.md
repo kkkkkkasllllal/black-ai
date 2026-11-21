@@ -1,6 +1,6 @@
 # 《BLACK AI》开发宪法（AGENTS.md · RPG Maker MV 版）
 
-本文件是《BLACK AI》RPG Maker MV 工程的最高工程规范。所有参与开发的 AI Agent 与开发者在编写任何插件、地图或数据前，必须无条件遵守本宪法。完整游戏策划以 [docs/black_ai.md](docs/black_ai.md) 为唯一设计真源；旧版 Godot 4.7 原型已完整归档于 `archive_godot/` 仅供对照参考。
+本文件是《BLACK AI》RPG Maker MV 工程的工程规范。策划和里程碑文档单独存放在桌面 [docs](../docs/) 中。
 
 ---
 
@@ -11,12 +11,14 @@
    - **严禁直接篡改官方内核文件**（`js/rpg_core.js`、`js/rpg_managers.js`、`js/rpg_objects.js`、`js/rpg_scenes.js`、`js/rpg_sprites.js`、`js/rpg_windows.js` 与 `js/libs/*`）。全部自定义逻辑一律以模块化插件写入 `js/plugins/BlackAI_*.js` 并按依赖顺序注册于 `js/plugins.js`。
    - **严格保持 ES2017 语法兼容**（RPG Maker MV 1.6.x 内置 NW.js 0.29 / Chromium 65 / V8 6.5）：**严禁使用**可选链 `?.`、空值合并 `??`、`String.prototype.replaceAll`、私有类字段 `#field` 等 ES2020+ 语法。
 2. **数据与代码彻底解耦**
-   - 全部核心数值与配置（6 档显卡、5 武器、6 消耗品、6 机箱、5 散热、3 系统提示词、13 角色、6 怪物、7 AI 娘 Boss、技能、11 结局、全局平衡参数）统一存放在 `data/black_ai/*.json`，插件中仅通过 `BlackAI.Data` 读取，**禁止硬编码数值表**。
+   - 全部核心数值与配置（6 档显卡、5 武器、6 消耗品、6 机箱、5 散热、3 系统提示词、14 角色、6 怪物、7 AI 娘 Boss、技能、11 结局、全局平衡参数）统一存放在 `data/black_ai/*.json`，插件中仅通过 `BlackAI.Data` 读取，**禁止硬编码数值表**。
    - 原生 MV 数据库（`data/System.json`、`Items.json`、`Weapons.json`、`Armors.json`、`Enemies.json`、`Skills.json`、`States.json`、`Tilesets.json`、`Map001.json` 等）可通过 `python tools/build_mv_assets_and_db.py` 与 `data/black_ai/*.json` 保持同步。
    - 所有分支剧情与 NPC 对话一律以纯文本 `.dialogue` 文件存放在 `dialogue/` 目录，由 `BlackAI_Dialogue.js` 直接解析运行，禁止在插件中堆砌大段分支台词。
-3. **临时美术占位优先玩法**
-   - 在核心玩法闭环完成前，所有地图瓦片、角色、大 PSU 电源、暗影怪与战斗立绘一律使用程序化生成的纯色/高对比度占位 PNG（通过 `tools/build_mv_assets_and_db.py` 生成于 `img/`）。
-   - 严禁因等待正式美术或音频资源而阻塞任何里程碑的可运行性。
+3. **地图与角色素材**
+   - 地图源图放在 `.image/.map/`，角色行走图源图放在 `.image/.characters/`。
+   - 新生成的角色以 `.image/.characters/claude.png` 为尺寸与站位参考，透明 PNG 整图 1086×1448，3 列 × 4 行，每帧 362×362。行的方向依次为下、左、右、上，角色脚底对齐参考图。
+   - 导入的附件原图保存在 `.image/.characters/originals/`。`python tools/build_native_altar.py --characters-only` 按角色配置生成对齐后的源图、MV 行走图、头像和战斗图，并同步圣坛角色事件。
+   - MV 运行时图块导入 `img/tilesets/`，角色行走图导入 `img/characters/`。当前大厅的角色导入图为 240×384，单帧 80×96。
 
 ---
 
@@ -27,11 +29,10 @@
 | `data/black_ai/` | 《BLACK AI》单一真源 JSON 配置：`config.json`、`items.json`、`characters.json`、`monsters.json`、`skills.json`、`bosses.json`、`endings.json` |
 | `data/` | RPG Maker MV 原生数据库与地图 JSON（`System.json`、`Map001.json` 等） |
 | `dialogue/` | 纯文本 `.dialogue` 分支对话剧本（7 位核心 AI 娘及后续剧情） |
-| `js/plugins/` | 核心模块化插件：`BlackAI_Core.js`（数据/全局记忆/存档状态/自检）、`BlackAI_BattleEngine.js`（纯战斗引擎）、`BlackAI_Dialogue.js`（对话/送礼/好感与助战面板）、`BlackAI_PSU.js`（大 PSU 据点菜单与断电彩蛋）、`BlackAI_BattleUI.js`（BS2 战斗界面）、`BlackAI_Explore.js`（8 向探索/提灯阴影/血字暗角/HUD/Esc 菜单）、`BlackAI_AltarWorld.js`（地图事件协调） |
-| `img/` | 程序化占位素材（瓦片、行走图、大 PSU、怪物/AI 娘战斗立绘、标题背景） |
-| `docs/` | 策划文档 `black_ai.md` 与里程碑计划 `milestones.md` |
+| `js/plugins/` | 当前启用 `BlackAI_Core.js`（数据/全局记忆/存档/自检）、`BlackAI_Dialogue.js`（对话解析）、`BlackAI_MVScenes.js`（地图事件/对话/PSU）、`BlackAI_MVBattle.js`（原生战斗与队伍数据桥接）。旧原型的纯逻辑仍用于无头回归测试。 |
+| `.image/` | 地图与角色源图 |
+| `img/` | MV 导入后的瓦片、行走图、战斗背景与立绘 |
 | `tools/` | 资产/数据库同步脚本 `build_mv_assets_and_db.py`、无头回归测试 `test_black_ai_runtime.js`、总校验入口 `validate_project.py` |
-| `archive_godot/` | 旧版 Godot 4.7 工程归档备份（不参与 MV 构建与校验） |
 
 ---
 
@@ -52,7 +53,7 @@
 
 ## 四、里程碑迭代纪律（单步原子交付）
 
-1. **后续开发每次只完成 `docs/milestones.md` 中的 1 个里程碑**（M7 起逐个推进），严禁跨里程碑堆砌无关功能。
+1. **后续开发每次只完成 [里程碑计划](../docs/milestones.md) 中的 1 个里程碑**（M7 起逐个推进），严禁跨里程碑堆砌无关功能。
 2. 每个里程碑交付时，必须向用户输出：
    - 新增/修改文件清单与核心设计说明；
    - `python tools/validate_project.py` 的完整校验结果；

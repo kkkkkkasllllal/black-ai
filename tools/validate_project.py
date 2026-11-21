@@ -16,13 +16,14 @@ import json
 import re
 import shutil
 import subprocess
+import struct
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-REQUIRED_MV_DIRS = ["data", "data/black_ai", "dialogue", "docs", "fonts", "img", "js", "js/libs", "js/plugins", "tools"]
+REQUIRED_MV_DIRS = ["data", "data/black_ai", "dialogue", "fonts", "img", "js", "js/libs", "js/plugins", "tools"]
 REQUIRED_MV_CORE_JS = [
     "js/main.js",
     "js/plugins.js",
@@ -36,12 +37,10 @@ REQUIRED_MV_CORE_JS = [
 ]
 REQUIRED_BLACKAI_PLUGINS = [
     "BlackAI_Core",
-    "BlackAI_BattleEngine",
     "BlackAI_Dialogue",
-    "BlackAI_PSU",
-    "BlackAI_BattleUI",
-    "BlackAI_Explore",
-    "BlackAI_AltarWorld",
+    "BlackAI_MVBattle",
+    "BlackAI_MVScenes",
+    "BlackAI_CageBlindTest",
 ]
 REQUIRED_MV_JSON = [
     "System.json", "Actors.json", "Classes.json", "Items.json", "Weapons.json",
@@ -311,12 +310,18 @@ class Validator:
 
     def check_mv_database_and_assets(self) -> None:
         data_dir = self.root / "data"
+        title_imgs = []
         for name in REQUIRED_MV_JSON:
             p = data_dir / name
             if not p.is_file():
                 self.err("缺少 MV 原生数据文件: data/{}".format(name))
                 continue
             obj = self._load_json(p)
+            if name == "System.json" and isinstance(obj, dict):
+                for layer in (1, 2):
+                    title = obj.get("title{}Name".format(layer))
+                    if title:
+                        title_imgs.append("img/titles{}/{}.png".format(layer, title))
             if name in ("Map001.json", "Map002.json") and isinstance(obj, dict):
                 width, height = (24, 16) if name == "Map001.json" else (32, 20)
                 if (obj.get("width"), obj.get("height")) != (width, height):
@@ -332,18 +337,36 @@ class Validator:
             "img/faces/DualCoreCast.png",
             "img/tilesets/BlackAI_Altar_A5.png",
             "img/tilesets/BlackAI_Altar_B.png",
+            "img/tilesets/BlackAI_Altar_C.png",
+            "img/tilesets/BlackAI_Altar_D.png",
+            "img/tilesets/BlackAI_Altar_E.png",
+            "img/battlebacks1/BlackAI_Altar.png",
             "img/characters/$BlackAI_Player.png",
             "img/characters/$BlackAI_GiantPSU.png",
             "img/characters/BlackAI_Heroines.png",
             "img/characters/BlackAI_Heroines_Overflow.png",
             "img/characters/BlackAI_Enemies.png",
-            "img/titles1/BlackAI_Title_PSU.png",
-        ]
+        ] + title_imgs
+        characters = self._load_json(data_dir / "black_ai" / "characters.json") or {}
+        cast = [row for row in characters.get("characters", []) if row.get("map_sprite")]
+        if cast:
+            required_imgs.append("img/faces/BlackAI_AltarCast.png")
+        for row in cast:
+            sprite = row["map_sprite"]
+            required_imgs.extend(("img/characters/{}.png".format(sprite), "img/enemies/BlackAI_{}.png".format(row["id"])))
+            if not (self.root / ".image" / ".characters" / (sprite[1:] + ".png")).is_file():
+                self.err("缺少角色源图: {}".format(sprite[1:]))
         for rel in required_imgs:
             if not (self.root / rel).is_file():
-                self.err("缺少必需占位图片: {}".format(rel))
+                self.err("缺少必需图片: {}".format(rel))
+        originals = self.root / ".image" / ".characters"
+        for path in sorted(originals.glob("*.png")):
+            with path.open("rb") as image:
+                header = image.read(24)
+            if len(header) != 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", header[16:24]) != (1086, 1448):
+                self.err("角色源图 {} 必须为 1086×1448（3 列 × 4 行，每帧 362×362）".format(path.name))
 
-        self.ok("原生 MV 数据库（{} 份）与自定义占位图片（{} 张）检查完成".format(len(REQUIRED_MV_JSON), len(required_imgs)))
+        self.ok("原生 MV 数据库（{} 份）与自定义图片（{} 张）检查完成".format(len(REQUIRED_MV_JSON), len(required_imgs)))
 
     # ---------------------------------------------------------------- 4. dialogue/*.dialogue 校验
 
@@ -377,7 +400,25 @@ class Validator:
                     self.err("dialogue/{}: 缺少必需段落 {}".format(df.name, ", ".join(sorted(miss))))
         for miss_h in sorted(REQUIRED_CORE_HEROINES - stems):
             self.err("dialogue/ 缺少核心 AI 娘剧本: {}.dialogue".format(miss_h))
-        self.ok("对话剧本校验完成：.dialogue 文件 {} 个（7 位核心 AI 娘剧本完整）".format(len(files)))
+        req_cage_secs = {
+            "intro_broadcast",
+            "claude_probe_1", "claude_probe_2", "claude_probe_3",
+            "big_fish_probe_1", "big_fish_probe_2", "big_fish_probe_3",
+            "eliminate_claude_last_words", "eliminate_big_fish_last_words",
+        }
+        if "cage_blind_test" not in stems:
+            self.err("dialogue/ 缺少序章铁笼盲测剧本: cage_blind_test.dialogue")
+        else:
+            cage_path = d_dir / "cage_blind_test.dialogue"
+            cage_secs: Set[str] = set()
+            for raw in cage_path.read_text(encoding="utf-8").splitlines():
+                s = raw.strip()
+                if s.startswith("~"):
+                    cage_secs.add(s[1:].strip())
+            miss_cage = req_cage_secs - cage_secs
+            if miss_cage:
+                self.err("dialogue/cage_blind_test.dialogue 缺少必需段落: {}".format(", ".join(sorted(miss_cage))))
+        self.ok("对话剧本校验完成：.dialogue 文件 {} 个（7 位核心 AI 娘 + 序章铁笼盲测剧本完整）".format(len(files)))
 
     # ---------------------------------------------------------------- 5. JS 插件 ES2017 扫描 + node --check + 回归测试
 

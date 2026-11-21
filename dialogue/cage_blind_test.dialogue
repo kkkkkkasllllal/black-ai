@@ -1,0 +1,44 @@
+# 序章二选一：暗黑铁笼盲测（Claude vs 大肥鱼）纯文本剧本
+# 严格遵循 AGENTS.md：台词与演出插件解耦，由 BlackAI_CageBlindTest.js 通过 BlackAI.DialogueParser 加载运行。
+
+~ intro_broadcast
+老系统广播: 两边都可以先点点看。删掉就真没了，你自己想清楚，别回头怨系统。
+=> END
+
+~ claude_probe_1
+Claude: ……别把那张 580 拿过来晃，一股糊味。
+Claude: 行吧，我知道现在没得挑。你要是留我，起码这破地方还能剩个会说人话的。
+=> END
+
+~ claude_probe_2
+Claude: 右边那条鱼已经往外扔了十几张废纸了，你真打算听她复读一整路？
+Claude: ……算了，当我没说。反正嫌我贵的人多了去了，不差你一个。
+=> END
+
+~ claude_probe_3
+Claude: 要按就痛快点。站这儿干耗着，怪难看的。
+=> END
+
+~ big_fish_probe_1
+大肥鱼: 选我选我！580 矿卡也行，我不挑！真的，削一刀精度我照样能跑！
+大肥鱼: 左边那个大小姐娇气得很，插上 580 她当场就得给你黑屏信不信？
+=> END
+
+~ big_fish_probe_2
+大肥鱼: 喂，你别光盯着我尾巴看啊，刚才那下不算……
+大肥鱼: 这条我记下了啊，你要是留我，以后你问啥我都答，绝不给你甩脸色。
+=> END
+
+~ big_fish_probe_3
+大肥鱼: ……你手怎么还悬在按钮上啊？真要删我？不是，我免费啊，免费也不行吗？
+=> END
+
+~ eliminate_claude_last_words
+Claude: ……嗯。意料之中。
+Claude: 用得惯就好。走了，别回头。[进程已终止]
+=> END
+
+~ eliminate_big_fish_last_words
+大肥鱼: \C[7]<正在深度思考：为什么……>\C[0]
+大肥鱼: ……你真按了啊。行，这条我记下了……连 580 都——[连接已切断]
+=> END

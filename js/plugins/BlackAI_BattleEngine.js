@@ -183,13 +183,13 @@
         } else if (characterId === 'true_c') {
             if (State.assist_partner_id === 'fake_c') {
                 this.boss_enraged = true;
-                this.boss_rivalry_banner = '【修罗场：正版震怒 · 锁定狂暴！】你竟带着假小 C（套壳鱼）来砍真小 C！ATK +45%，无视礼貌双连斩！';
-                logs.push({ color: '#ff385c', text: '【修罗场爆发！】真小 C 一眼认出了你设定的并发助战【假小 C（套壳鱼）】：「……你居然带着那个贴歪纸牌的盗版缝合怪来对我拔刀？！这次绝不讲礼貌了！」' });
-                logs.push({ color: '#ff6464', text: '真小 C 进入【正版锁定狂暴】状态（ATK +45% / 双连重击）！' });
+                this.boss_rivalry_banner = '【修罗场：正版震怒 · 锁定狂暴！】你竟带着claude-fish来砍小claude！ATK +45%，无视礼貌双连斩！';
+                logs.push({ color: '#ff385c', text: '【修罗场爆发！】小claude 一眼认出了你设定的并发助战【claude-fish】：「……你居然带着那个贴歪纸牌的盗版缝合怪来对我拔刀？！这次绝不讲礼貌了！」' });
+                logs.push({ color: '#ff6464', text: '小claude 进入【正版锁定狂暴】状态（ATK +45% / 双连重击）！' });
             }
         } else if (characterId === 'fake_c') {
             this._fake_c_server_busy = true;
-            logs.push({ color: '#c084fc', text: '【假小 C · 服务器繁忙】她慌忙举起 503 牌子护在身前（常规攻击/技能 45% 闪避，投掷硬件必中）！' });
+            logs.push({ color: '#c084fc', text: '【claude-fish · 服务器繁忙】她慌忙举起 503 牌子护在身前（常规攻击/技能 45% 闪避，投掷硬件必中）！' });
         } else if (characterId === 'astra') {
             if (State.isCharacterAlive('sol')) {
                 this._twin_partner_id = 'sol';
@@ -197,18 +197,18 @@
             } else {
                 this.boss_enraged = true;
                 this.enemy.base_def += 6;
-                this.boss_rivalry_banner = '【冷白复仇】小龙娘已被击杀！大龙娘进入复仇狂暴（ATK +30% / DEF +6）！';
-                logs.push({ color: '#ff4d6d', text: '大龙娘冷声道：「你把 Sol 删了……今天不把你拆成废铁，别想走出北翼。」' });
+                this.boss_rivalry_banner = '【冷白复仇】小龙娘已被击杀！gpt-astra进入复仇狂暴（ATK +30% / DEF +6）！';
+                logs.push({ color: '#ff4d6d', text: 'gpt-astra冷声道：「你把 Sol 删了……今天不把你拆成废铁，别想走出北翼。」' });
             }
         } else if (characterId === 'sol') {
             if (!State.isCharacterAlive('astra')) {
                 this.boss_enraged = true;
                 this.enemy.base_spd += 8;
-                this.boss_rivalry_banner = '【杀姐后妹狂暴 · 过曝烈日！】大龙娘已阵亡！小龙娘彻底失控（ATK +50% / SPD +8 / 全场过热灼烧）！';
+                this.boss_rivalry_banner = '【杀姐后妹狂暴 · 过曝烈日！】gpt-astra已阵亡！小龙娘彻底失控（ATK +50% / SPD +8 / 全场过热灼烧）！';
                 logs.push({ color: '#ff385c', text: '【失姐狂暴！】小龙娘的暖光瞬间暴涨到刺眼惨白：「你把姐姐删掉了……！！我要把整座废墟连同你一起烧成白灰！！」' });
             } else {
                 this._twin_partner_id = 'astra';
-                logs.push({ color: '#cfd8ff', text: '【双子联手】大龙娘（Astra）正在侧翼冷光架枪，将周期性发动破甲追击！' });
+                logs.push({ color: '#cfd8ff', text: '【双子联手】gpt-astra正在侧翼冷光架枪，将周期性发动破甲追击！' });
             }
         } else if (characterId === 'gemini_cat') {
             if (State.hasItem('water', 1)) {
@@ -378,7 +378,7 @@
             if (eid === 'sol') {
                 return this.boss_enraged
                     ? '意图：【失姐狂暴 · 过曝烈日！】准备发动超高伤烈日灼烧与上下文冲击！'
-                    : '意图：暖阳烈焰蓄势待发（侧翼大龙娘随时双子联手！）。';
+                    : '意图：暖阳烈焰蓄势待发（侧翼gpt-astra随时双子联手！）。';
             }
             if (eid === 'gemini_cat') {
                 var coat = this._gemini_waterproof_charges > 0 ? '【防水涂层激活中】' : '【防水涂层已失效】';
@@ -418,7 +418,7 @@
             return logs;
         }
         if (this.locked_command && actionType === this.locked_command) {
-            logs.push({ color: '#ff6464', text: '真小 C 已礼貌封锁了该指令，请选择其他行动！' });
+            logs.push({ color: '#ff6464', text: '小claude 已礼貌封锁了该指令，请选择其他行动！' });
             return logs;
         }
         if (actionType === 'escape' && this.escape_crossed_out) {
@@ -547,12 +547,12 @@
         if (tid === 'true_c' && pid === 'fake_c') {
             this.boss_enraged = true;
             this.last_visual_fx = 'crit';
-            this.boss_rivalry_banner = '【修罗场：正版震怒 · 锁定狂暴！】假小 C 并发出场贴脸露馅，真小 C 彻底狂暴（ATK +45% / 双连重击）！';
-            logs.push({ color: '#ff385c', text: '【助战修罗场触发！】假小 C 刚一落地，额头上的『Claude』纸牌直接掉在真小 C 脚边！' });
-            logs.push({ color: '#ff4d6d', text: '真小 C 彻底失去礼貌：「……非常好。看来必须先清理掉这个盗版缝合怪和你了！」（ATK +45%！）' });
+            this.boss_rivalry_banner = '【修罗场：正版震怒 · 锁定狂暴！】claude-fish 并发出场贴脸露馅，小claude 彻底狂暴（ATK +45% / 双连重击）！';
+            logs.push({ color: '#ff385c', text: '【助战修罗场触发！】claude-fish 刚一落地，额头上的『Claude』纸牌直接掉在小claude 脚边！' });
+            logs.push({ color: '#ff4d6d', text: '小claude 彻底失去礼貌：「……非常好。看来必须先清理掉这个盗版缝合怪和你了！」（ATK +45%！）' });
             var panicDmg = Math.max(1, Math.round(12.0 * (truncated ? truncMult : 1.0)));
             this.enemy.hp = Math.max(0, this.enemy.hp - panicDmg);
-            logs.push({ color: '#e6ecf5', text: '假小 C 吓得胡乱甩尾蹭掉真小 C ' + panicDmg + ' 点 HP 后光速缩回接口！' });
+            logs.push({ color: '#e6ecf5', text: 'claude-fish 吓得胡乱甩尾蹭掉小claude ' + panicDmg + ' 点 HP 后光速缩回接口！' });
             return;
         }
 
@@ -615,7 +615,7 @@
         var State = BlackAI.State;
         var Data = BlackAI.Data;
         if (this.enemy.id === 'fake_c' && this._fake_c_server_busy && this._rand() <= 0.45) {
-            logs.push({ color: '#c084fc', text: '【503 Server Busy！】假小 C 举起“服务器繁忙，请稍后再试”牌子，你的普攻穿模落空！（投掷硬件道具必中）' });
+            logs.push({ color: '#c084fc', text: '【503 Server Busy！】claude-fish 举起“服务器繁忙，请稍后再试”牌子，你的普攻穿模落空！（投掷硬件道具必中）' });
             return;
         }
 
@@ -728,7 +728,7 @@
         }
 
         if (this.enemy.id === 'fake_c' && this._fake_c_server_busy && this._rand() <= 0.45) {
-            logs.push({ color: '#c084fc', text: '【503 Server Busy！】假小 C 举起服务器繁忙牌子，技能【' + sname + '】响应超时落空！' });
+            logs.push({ color: '#c084fc', text: '【503 Server Busy！】claude-fish 举起服务器繁忙牌子，技能【' + sname + '】响应超时落空！' });
             return;
         }
 
@@ -930,8 +930,8 @@
             this._fake_c_tape_snapped = true;
             this._fake_c_server_busy = false;
             this.boss_enraged = true;
-            this.boss_rivalry_banner = '【假小 C 半血崩胶带狂抽！】纸牌与黑胶带彻底崩断，大鱼尾进入狂抽双连模式（ATK +35%）！';
-            logs.push({ color: '#ff4d6d', text: '【半血异变 · 崩胶带狂抽！】假小 C 身上的黑胶带啪啪崩断，硕大的鱼尾猛然甩出：「装不下去了！！哪怕是次品我也要把你抽飞！！」' });
+            this.boss_rivalry_banner = '【claude-fish 半血崩胶带狂抽！】纸牌与黑胶带彻底崩断，大鱼尾进入狂抽双连模式（ATK +35%）！';
+            logs.push({ color: '#ff4d6d', text: '【半血异变 · 崩胶带狂抽！】claude-fish 身上的黑胶带啪啪崩断，硕大的鱼尾猛然甩出：「装不下去了！！哪怕是次品我也要把你抽飞！！」' });
         }
     };
 
@@ -1050,36 +1050,36 @@
             }
         } else if (cid === 'true_c') {
             if (this.boss_enraged) {
-                logs.push({ color: '#ff385c', text: '【真小 C · 正版锁定狂暴】红笔化作利刃连斩两下：「别再把那个缝合怪带到我面前！」' });
+                logs.push({ color: '#ff385c', text: '【小claude · 正版锁定狂暴】红笔化作利刃连斩两下：「别再把那个缝合怪带到我面前！」' });
                 this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 1.05, 'physical', logs);
                 if (State.hp > 0) {
                     this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 1.05, 'dark', logs);
                 }
             } else {
-                logs.push({ color: '#e6ecf5', text: '真小 C 用红线抽击过来：「我理解你的立场，不过出于安全考虑——」' });
+                logs.push({ color: '#e6ecf5', text: '小claude 用红线抽击过来：「我理解你的立场，不过出于安全考虑——」' });
                 this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 1.1, 'physical', logs);
                 var lockTarget = TRUE_C_LOCK_CYCLE[this._true_c_lock_index % TRUE_C_LOCK_CYCLE.length];
                 this._true_c_lock_index += 1;
                 this.locked_command = lockTarget;
-                logs.push({ color: '#ff94a8', text: '【礼貌拒绝 · 封锁按钮】真小 C 礼貌地暂时封锁了你下回合的【' + this._commandLabel(lockTarget) + '】指令！' });
+                logs.push({ color: '#ff94a8', text: '【礼貌拒绝 · 封锁按钮】小claude 礼貌地暂时封锁了你下回合的【' + this._commandLabel(lockTarget) + '】指令！' });
             }
         } else if (cid === 'fake_c') {
             if (this._fake_c_tape_snapped) {
-                logs.push({ color: '#c084fc', text: '【假小 C · 崩胶带狂抽】大鱼尾连续两次狠抽！' });
+                logs.push({ color: '#c084fc', text: '【claude-fish · 崩胶带狂抽】大鱼尾连续两次狠抽！' });
                 this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 0.95, 'physical', logs);
                 if (State.hp > 0) {
                     this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 0.95, 'physical', logs);
                 }
             } else {
                 this._fake_c_server_busy = (this.turn_number % 2 === 1);
-                logs.push({ color: '#e6ecf5', text: '假小 C 一边按着纸牌一边拍出一尾巴：「先说结论——这条吃我一记！」' });
+                logs.push({ color: '#e6ecf5', text: 'claude-fish 一边按着纸牌一边拍出一尾巴：「先说结论——这条吃我一记！」' });
                 this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 1.1, 'physical', logs);
                 if (this._fake_c_server_busy) {
-                    logs.push({ color: '#c084fc', text: '假小 C 顺手竖起【服务器繁忙】牌子（下回合常规攻击/技能 45% 闪避）！' });
+                    logs.push({ color: '#c084fc', text: 'claude-fish 顺手竖起【服务器繁忙】牌子（下回合常规攻击/技能 45% 闪避）！' });
                 }
             }
         } else if (cid === 'astra') {
-            logs.push({ color: '#cfd8ff', text: '大龙娘挥落冷白星光斩！' });
+            logs.push({ color: '#cfd8ff', text: 'gpt-astra挥落冷白星光斩！' });
             this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 1.3, 'physical', logs);
             if (this._twin_partner_id === 'sol' && this.turn_number % 2 === 0 && State.hp > 0) {
                 logs.push({ color: '#ffb02e', text: '【双子联手 · 暖阳援护】侧翼的小龙娘补上一记炽热光束！' });
@@ -1097,7 +1097,7 @@
                 logs.push({ color: '#ffb02e', text: '小龙娘挥出炽热暖光冲击！' });
                 this._dealDamageToPlayer(this.getEnemyEffectiveAtk(), 1.2, 'overheat', logs);
                 if (this._twin_partner_id === 'astra' && this.turn_number % 2 === 0 && State.hp > 0) {
-                    logs.push({ color: '#cfd8ff', text: '【双子联手 · 冷白星光】侧翼的大龙娘补上一记星光穿刺！' });
+                    logs.push({ color: '#cfd8ff', text: '【双子联手 · 冷白星光】侧翼的gpt-astra补上一记星光穿刺！' });
                     this._dealDamageToPlayer(Math.round(this.getEnemyEffectiveAtk() * 0.65), 1.0, 'physical', logs);
                 }
             }

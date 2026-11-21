@@ -397,12 +397,12 @@
             }
             if (BlackAI.State.isCharacterAlive('fake_c')) {
                 BlackAI.State.setAssistPartner('fake_c');
-                this.showHudNotice('调试：假小 C / 小肥鱼好感已升至 ≥75%，已自动将【假小 C】设为 API 并发助战！', 4.2);
+                this.showHudNotice('调试：claude-fish / 小肥鱼好感已升至 ≥75%，已自动将【claude-fish】设为 API 并发助战！', 4.2);
             } else if (BlackAI.State.isCharacterAlive('small_fish')) {
                 BlackAI.State.setAssistPartner('small_fish');
-                this.showHudNotice('调试：假小 C / 小肥鱼好感已升至 ≥75%，已自动将【小肥鱼】设为 API 并发助战！', 4.2);
+                this.showHudNotice('调试：claude-fish / 小肥鱼好感已升至 ≥75%，已自动将【小肥鱼】设为 API 并发助战！', 4.2);
             } else {
-                this.showHudNotice('调试：好感已拉高，但假小 C 与小肥鱼当前局已阵亡，请先复活核心 AI 娘。', 3.8);
+                this.showHudNotice('调试：好感已拉高，但claude-fish 与小肥鱼当前局已阵亡，请先复活核心 AI 娘。', 3.8);
             }
             this.syncMapEvents();
         },

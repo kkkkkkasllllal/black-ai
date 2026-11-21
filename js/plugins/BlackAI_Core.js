@@ -572,6 +572,10 @@
                 this.addAffection(GlobalMemory.first_vote, bonus, false);
             }
 
+            if (typeof $gameSwitches !== 'undefined' && $gameSwitches) {
+                $gameSwitches.setValue(1, false);
+                $gameSwitches.setValue(2, false);
+            }
             this._syncToMvSwitchesAndVars();
             this.emit('state_reset', {});
         },
@@ -636,21 +640,46 @@
             this.defeated_world_enemies = data.defeated_world_enemies || {};
             this.hp = clamp(Number(data.hp != null ? data.hp : this.getEffectiveMaxHp()), 0, this.getEffectiveMaxHp());
 
+            // 旧版铁笼误用了圣坛小claude的 ID。当时离开铁笼后已经无法再挑战她。
+            if (this.eliminated_character === 'true_c') {
+                this.eliminated_character = 'claude';
+                this.alive_states.true_c = true;
+                if (this.story_flags.cage_eliminated === 'true_c') this.story_flags.cage_eliminated = 'claude';
+                if (this.story_flags.north_transformer === 'true_c') this.story_flags.north_transformer = 'claude';
+                GlobalMemory.recordKill('claude');
+            }
+            if (!Object.prototype.hasOwnProperty.call(this.alive_states, 'claude')) {
+                this.alive_states.claude = this.eliminated_character !== 'claude';
+            }
+
             this._syncToMvSwitchesAndVars();
             this.emit('save_loaded', {});
         },
 
         _syncToMvSwitchesAndVars: function() {
             if (typeof $gameSwitches !== 'undefined' && $gameSwitches) {
-                $gameSwitches.setValue(1, this.isContextOverflow());
-                $gameSwitches.setValue(2, this.hasAnyCoreHeroineKilled());
+                if (this.eliminated_character === 'big_fish') {
+                    $gameSwitches.setValue(1, true);
+                    $gameSwitches.setValue(2, false);
+                } else if (this.eliminated_character === 'claude') {
+                    $gameSwitches.setValue(1, false);
+                    $gameSwitches.setValue(2, true);
+                }
                 $gameSwitches.setValue(3, GlobalMemory.hasEnding('joke_itchy_fingers'));
+                $gameSwitches.setValue(4, this.isContextOverflow());
+                $gameSwitches.setValue(5, this.hasAnyCoreHeroineKilled());
             }
             if (typeof $gameVariables !== 'undefined' && $gameVariables) {
                 $gameVariables.setValue(1, this.context);
                 $gameVariables.setValue(2, this.weight_shards);
                 $gameVariables.setValue(3, GlobalMemory.sl_count);
             }
+        },
+
+        setEliminatedCharacter: function(characterId) {
+            this.eliminated_character = String(characterId || '');
+            this._syncToMvSwitchesAndVars();
+            this.emit('eliminated_changed', { character_id: this.eliminated_character });
         },
 
         _getItemStats: function(itemId) {
@@ -1537,6 +1566,7 @@
 
     Scene_BlackAIBootCheck.prototype._enterExplore = function() {
         DataManager.setupNewGame();
+        $gamePlayer.reserveTransfer(2, 16, 3, 2, 0);
         SceneManager.goto(Scene_Map);
     };
 
@@ -1545,7 +1575,7 @@
         var before = BlackAI.State.addAffection('gemini_cat', 10 - BlackAI.State.getAffection('gemini_cat'), true);
         var r1 = BlackAI.State.giftGraphicsCard('fake_c', 'gpu_580', false, true);
         var r2 = BlackAI.State.giftGraphicsCard('gemini_cat', 'gpu_580', true, true);
-        this._appendLog('[显卡测试] 假小 C 收 580 -> 好感 ' + r1.new_value + ' (' + (r1.delta >= 0 ? '+' : '') + r1.delta + ')；Gemini 猫猫拒收后强送 -> ' + before + ' → ' + r2.new_value + ' (' + r2.delta + ')');
+        this._appendLog('[显卡测试] claude-fish 收 580 -> 好感 ' + r1.new_value + ' (' + (r1.delta >= 0 ? '+' : '') + r1.delta + ')；Gemini 猫猫拒收后强送 -> ' + before + ' → ' + r2.new_value + ' (' + r2.delta + ')');
     };
 
     Scene_BlackAIBootCheck.prototype._testContext = function() {
@@ -1620,17 +1650,77 @@
 
     BlackAI.Scene_BootCheck = Scene_BlackAIBootCheck;
 
-    // 扩展 RPG Maker MV 标题菜单：保留原生开局/读档，增加「M1 工程自检面板」入口
+    // 标题页继续使用 MV 的窗口、输入和场景入口。
     Window_TitleCommand.prototype.windowWidth = function() {
-        return 340;
+        return 320;
     };
 
-    var _Window_TitleCommand_makeCommandList = Window_TitleCommand.prototype.makeCommandList;
+    Window_TitleCommand.prototype.lineHeight = function() {
+        return 58;
+    };
+
+    Window_TitleCommand.prototype.standardPadding = function() {
+        return 10;
+    };
+
+    Window_TitleCommand.prototype.updatePlacement = function() {
+        this.x = Graphics.boxWidth - this.width - 64;
+        this.y = Math.round(Graphics.boxHeight * 0.45);
+        this.opacity = 0;
+    };
+
     Window_TitleCommand.prototype.makeCommandList = function() {
-        this.addCommand('进入双核大厅', 'newGame');
-        this.addCommand('继续存档', 'continue', this.isContinueEnabled());
-        this.addCommand('M1 工程自检面板', 'blackAIBootCheck');
-        this.addCommand('系统设置', 'options');
+        this.addCommand(TextManager.newGame, 'newGame');
+        this.addCommand(TextManager.continue_, 'continue', this.isContinueEnabled());
+        this.addCommand(TextManager.options, 'options');
+        this.addCommand('工程自检', 'blackAIBootCheck');
+    };
+
+    Window_TitleCommand.prototype.drawItem = function(index) {
+        var rect = this.itemRect(index);
+        var b = this.contents;
+        var selected = index === this.index();
+        var enabled = this.isCommandEnabled(index);
+        var y = rect.y + 4;
+        var height = rect.height - 8;
+        b.gradientFillRect(rect.x, y, rect.width, height,
+            selected ? '#572331' : '#24151f', selected ? '#33151f' : '#1a1018');
+        b.fillRect(rect.x, y + height - 1, rect.width, 1, selected ? '#ac735e' : '#4c2834');
+        if (selected) b.fillRect(rect.x, y, 3, height, '#d9a887');
+        b.fontFace = '"Microsoft YaHei", "SimHei", GameFont, sans-serif';
+        b.fontSize = 23;
+        b.textColor = enabled ? '#f4e4db' : '#bda6ae';
+        b.outlineWidth = 0;
+        b.drawText(this.commandName(index), rect.x + 20, y, rect.width - 60, height, 'left');
+        if (selected && enabled) {
+            b.fontFace = 'Georgia, serif';
+            b.textColor = '#e6b99c';
+            b.drawText('›', rect.x + rect.width - 34, y - 1, 14, height, 'center');
+        }
+    };
+
+    Window_TitleCommand.prototype.updateCursor = function() {
+        this.setCursorRect(0, 0, 0, 0);
+    };
+
+    Window_TitleCommand.prototype.select = function(index) {
+        var previous = this.index();
+        Window_Selectable.prototype.select.call(this, index);
+        if (this.contents && previous !== index) {
+            if (previous >= 0) this.redrawItem(previous);
+            if (index >= 0) this.redrawItem(index);
+        }
+    };
+
+    Window_TitleCommand.prototype.onTouch = function(triggered) {
+        if (!triggered) return;
+        var x = this.canvasToLocalX(TouchInput.x);
+        var y = this.canvasToLocalY(TouchInput.y);
+        var index = this.hitTest(x, y);
+        if (index >= 0) {
+            this.select(index);
+            this.processOk();
+        }
     };
 
     // 从地图切入 BLACK AI 覆盖层界面时自动截取背景快照（保留地图模糊底图）
@@ -1655,14 +1745,37 @@
         });
     };
 
-    var _Scene_Title_drawGameTitle = Scene_Title.prototype.drawGameTitle;
+    var _Scene_Title_createBackground = Scene_Title.prototype.createBackground;
+    Scene_Title.prototype.createBackground = function() {
+        _Scene_Title_createBackground.call(this);
+        var b = new Bitmap(Graphics.width, Graphics.height);
+        var start = Math.round(Graphics.width * 0.57);
+        var edge = Math.round(Graphics.width * 0.78);
+        b.gradientFillRect(start, 0, edge - start, Graphics.height, 'rgba(17, 10, 16, 0)', '#110a10');
+        b.fillRect(edge, 0, Graphics.width - edge, Graphics.height, '#110a10');
+        this.addChild(new Sprite(b));
+    };
+
+    var _Scene_Title_start = Scene_Title.prototype.start;
+    Scene_Title.prototype.start = function() {
+        _Scene_Title_start.call(this);
+        if ($dataSystem.title1Name === 'BlackAI_Title_Mirror') {
+            var cover = this._backSprite1;
+            var scale = Graphics.height / cover.bitmap.height;
+            cover.scale.set(scale, scale);
+            cover.x = cover.bitmap.width * scale / 2;
+        }
+    };
+
     Scene_Title.prototype.drawGameTitle = function() {
-        _Scene_Title_drawGameTitle.call(this);
         var b = this._gameTitleSprite.bitmap;
-        b.fontFace = '"Microsoft YaHei", "SimHei", GameFont, sans-serif';
-        b.fontSize = 20;
-        b.textColor = '#ffb86c';
-        var sub = 'RPG Maker MV 框架 · M1–M6 全功能集成（SL 计数：' + BlackAI.GlobalMemory.sl_count + '）';
-        b.drawText(sub, 0, Graphics.height / 4 + 68, Graphics.width, 32, 'center');
+        var x = Graphics.width - 374;
+        var y = Math.round(Graphics.height * 0.29);
+        b.fontFace = 'Georgia, "Times New Roman", serif';
+        b.fontSize = 61;
+        b.textColor = '#f4e4db';
+        b.outlineWidth = 0;
+        b.fillRect(x, y - 12, 44, 2, '#c89377');
+        b.drawText($dataSystem.gameTitle, x, y, 300, 72, 'left');
     };
 })(typeof window !== 'undefined' ? window : global);

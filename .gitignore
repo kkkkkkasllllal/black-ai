@@ -2,9 +2,10 @@
 save/
 www/
 
-# Legacy Godot archive cache
+# Local backup and playtest files
 .godot/
-archive_godot/.godot/
+.mv-backups/
+.mv-qa/
 
 # Exports / builds
 /build/

@@ -1,5 +1,5 @@
 /*:
- * @plugindesc 《BLACK AI》M5+M6 BS2 高难回合制战斗界面（含输出截断横幅、并发助战按钮、真小 C 封锁、红线划掉逃跑与 1-bit 血条乱码）
+ * @plugindesc 《BLACK AI》M5+M6 BS2 高难回合制战斗界面（含输出截断横幅、并发助战按钮、小claude 封锁、红线划掉逃跑与 1-bit 血条乱码）
  * @author BLACK AI Team
  * @help
  * 由 BlackAI_AltarWorld.js 调用 Scene_BlackAIBattle.startBattle(...) 启动，战后无缝返回地图原坐标。

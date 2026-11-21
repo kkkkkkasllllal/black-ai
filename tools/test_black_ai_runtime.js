@@ -3,7 +3,7 @@
 /**
  * 《BLACK AI》RPG Maker MV 核心插件 Node.js 无头回归测试（M1–M6）
  * 验证：
- * 1. BlackAI.Data 全量加载（31 物品 / 13 角色 / 6 怪物 / 7 Boss / 12 技能 / 11 结局）
+ * 1. BlackAI.Data 全量加载（31 物品 / 14 角色 / 6 怪物 / 7 Boss / 12 技能 / 11 结局）
  * 2. 6 档显卡送礼规则（580 假小 C +12 / 大肥鱼 +8 / 猫猫拒收强送 -5；600900 100→200%）
  * 3. 大 PSU 清理缓存、400 HP 有效上限拦截、GlobalMemory 持久化读写
  * 4. 全部 7 位核心 AI 娘 .dialogue 剧本解析与表/里世界分支运行
@@ -192,13 +192,33 @@ function runAllTests() {
     assert.strictEqual(st.isCharacterAlive('small_fish'), false, '击败 Boss 后 alive_states 应置为 false');
     assert.strictEqual(BlackAI.GlobalMemory.hasKilledInPast('small_fish'), true, '击败 Boss 应写入 GlobalMemory.killed_in_past_saves');
 
+    // 旧存档将序章的 Claude 错存成了小claude。
+    st.resetNewGame(false);
+    const legacyCageSave = st.serialize();
+    delete legacyCageSave.alive_states.claude;
+    legacyCageSave.alive_states.true_c = false;
+    legacyCageSave.eliminated_character = 'true_c';
+    legacyCageSave.story_flags.cage_eliminated = 'true_c';
+    legacyCageSave.story_flags.north_transformer = 'true_c';
+    st.deserialize(legacyCageSave);
+    assert.strictEqual(st.eliminated_character, 'claude');
+    assert.strictEqual(st.story_flags.cage_eliminated, 'claude');
+    assert.strictEqual(st.story_flags.north_transformer, 'claude');
+    assert.strictEqual(st.isCharacterAlive('claude'), false);
+    assert.strictEqual(st.isCharacterAlive('true_c'), true);
+    assert.strictEqual(st.hasAnyCoreHeroineKilled(), false);
+
+    st.killCharacter('true_c');
+    st.deserialize(st.serialize());
+    assert.strictEqual(st.isCharacterAlive('true_c'), false, '圣坛内的真实击杀在读档后仍然有效');
+
     // 清理临时目录
     try {
         fs.unlinkSync(memPath);
         fs.rmdirSync(tmpDir);
     } catch (_e) {}
 
-    console.log('[PASS] Node.js 无头回归测试全部通过（M1 数据 / M3 PSU / M4 送礼与对话 / M5 硬件回合制 / M6 Boss 与溢出 UI 破坏）');
+    console.log('[PASS] Node.js 无头回归测试全部通过（M1–M6 核心机制 / 序章 Claude 存档迁移）');
 }
 
 runAllTests();

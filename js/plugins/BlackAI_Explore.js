@@ -651,7 +651,7 @@
             { text: '调试：发放 M4 全套 6 档测试显卡', fn: function() { BlackAI.World.grantM4GpuKit(); SceneManager.pop(); } },
             { text: '调试：发放 M5 全套战斗武器/机箱/散热/消耗品', fn: function() { BlackAI.World.grantM5BattleKit(); SceneManager.pop(); } },
             { text: '调试：将 Token 降至 10（速测输出截断）', fn: function() { BlackAI.World.drainTokenDebug(); SceneManager.pop(); } },
-            { text: '调试：拉高假小 C / 小肥鱼好感至 75%（速测并发助战）', fn: function() { BlackAI.World.prepM6AssistDebug(); SceneManager.pop(); } },
+            { text: '调试：拉高claude-fish / 小肥鱼好感至 75%（速测并发助战）', fn: function() { BlackAI.World.prepM6AssistDebug(); SceneManager.pop(); } },
             { text: '调试：一键复活全部核心 AI 娘（仅当前局）', fn: function() { BlackAI.World.reviveAllHeroinesDebug(); SceneManager.pop(); } },
             { text: '调试：切换大肥鱼击杀态（测 PSU 红灯报警）', fn: function() { BlackAI.World.toggleBigFishKillDebug(); SceneManager.pop(); } },
             { text: '前往 M1 工程骨架自检面板', fn: function() { SceneManager.goto(BlackAI.Scene_BootCheck); } }

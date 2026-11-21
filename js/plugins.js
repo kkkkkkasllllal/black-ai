@@ -3,10 +3,13 @@
 var $plugins =
 [
 {"name":"BlackAI_Core","status":true,"description":"《BLACK AI》M1 核心基座：1280x720 画面、JSON 数据中心、GlobalMemory 跨存档记忆、GameState 状态与自检标题界面","parameters":{}},
-{"name":"BlackAI_BattleEngine","status":true,"description":"《BLACK AI》M5+M6 纯逻辑 BS2 高难回合制战斗引擎（支持 6 怪物、7 AI 娘 Boss、API 并发助战与溢出 UI 破坏）","parameters":{}},
+{"name":"BlackAI_BattleEngine","status":false,"description":"《BLACK AI》M5+M6 纯逻辑 BS2 高难回合制战斗引擎（支持 6 怪物、7 AI 娘 Boss、API 并发助战与溢出 UI 破坏）","parameters":{}},
 {"name":"BlackAI_Dialogue","status":true,"description":"《BLACK AI》M4+M6 纯文本 .dialogue 分支对话解析器、对话框 UI、6 档显卡送礼与 0–200% 好感/API 并发助战面板","parameters":{}},
-{"name":"BlackAI_PSU","status":true,"description":"《BLACK AI》M3 巨型大 PSU 电源据点菜单（清理缓存 / 升级 HP / 四槽装备背包 / 三槽存读档）与背面 I/O 总开关断电蓝屏彩蛋","parameters":{}},
-{"name":"BlackAI_BattleUI","status":true,"description":"《BLACK AI》M5+M6 BS2 高难回合制战斗界面（含输出截断横幅、并发助战按钮、真小 C 封锁、红线划掉逃跑与 1-bit 血条乱码）","parameters":{}},
-{"name":"BlackAI_Explore","status":true,"description":"《BLACK AI》M2 2D 上帝视角探索系统：八向移动、鼠标提灯实时 2D 阴影、F 切档、上下文溢出暗角血字抖动、HUD、挥砍先手与 Esc 菜单","parameters":{}},
-{"name":"BlackAI_AltarWorld","status":true,"description":"《BLACK AI》巨型电源圣坛世界协调器（大 PSU 正背面交互、7 AI 娘对话/拔刀、6 暗影怪遇敌/刷新与调试补给）","parameters":{}}
+{"name":"BlackAI_PSU","status":false,"description":"《BLACK AI》M3 巨型大 PSU 电源据点菜单（清理缓存 / 升级 HP / 四槽装备背包 / 三槽存读档）与背面 I/O 总开关断电蓝屏彩蛋","parameters":{}},
+{"name":"BlackAI_BattleUI","status":false,"description":"《BLACK AI》M5+M6 BS2 高难回合制战斗界面（含输出截断横幅、并发助战按钮、真小 C 封锁、红线划掉逃跑与 1-bit 血条乱码）","parameters":{}},
+{"name":"BlackAI_Explore","status":false,"description":"《BLACK AI》M2 2D 上帝视角探索系统：八向移动、鼠标提灯实时 2D 阴影、F 切档、上下文溢出暗角血字抖动、HUD、挥砍先手与 Esc 菜单","parameters":{}},
+{"name":"BlackAI_AltarWorld","status":false,"description":"《BLACK AI》巨型电源圣坛世界协调器（大 PSU 正背面交互、7 AI 娘对话/拔刀、6 暗影怪遇敌/刷新与调试补给）","parameters":{}},
+{"name":"BlackAI_MVBattle","status":true,"description":"BLACK AI 原生 MV 队伍与战斗规则","parameters":{}},
+{"name":"BlackAI_MVScenes","status":true,"description":"BLACK AI 双核大厅与电源圣坛原生事件","parameters":{}},
+{"name":"BlackAI_CageBlindTest","status":true,"description":"《BLACK AI》序章二选一：暗黑铁笼盲测（Claude vs 大肥鱼）交互演出插件（原生 RMMV API）","parameters":{"MapId":"1","LeftEventId":"1","RightEventId":"2","SwitchElimBigFish":"1","SwitchElimClaude":"2","TargetMapId":"2","TargetX":"16","TargetY":"3","EnableConfirm":"true","ImgLeftCageBack":"Cage_Left_Back","ImgLeftCageFront":"Cage_Left_Front","ImgRightCageBack":"Cage_Right_Back","ImgRightCageFront":"Cage_Right_Front","ImgClaudeHand":"Cage_Claude_Hand","ImgBigFishTail":"Cage_BigFish_Tail","ImgPaperScrap":"Cage_Paper_Scrap","ImgRedButton":"Cage_Red_Button","ImgWallBanner":"Cage_Wall_RedText","ImgClaudeShatter":"Cage_Claude_Silhouette","ImgBigFishShatter":"Cage_BigFish_Silhouette"}}
 ];
