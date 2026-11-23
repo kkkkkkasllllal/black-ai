@@ -1,4 +1,4 @@
 [
 null,
-{"id":1,"battlerName":"","characterIndex":0,"characterName":"$BlackAI_Player","classId":1,"equips":[1,1,0,0,0],"faceIndex":0,"faceName":"","traits":[],"initialLevel":1,"maxLevel":99,"name":"User_0","nickname":"废墟探索者","note":"","profile":"手持提灯的断网废墟探索者，周旋于 7 位核心 AI 娘与算力饥荒之间。"}
+{"id":1,"battlerName":"","characterIndex":0,"characterName":"$BlackAI_Player","classId":1,"equips":[1,1,0,0,0],"faceIndex":0,"faceName":"BlackAI_Player","traits":[],"initialLevel":1,"maxLevel":99,"name":"User_0","nickname":"废墟探索者","note":"","profile":"未上色的黑白素描线稿本体，手持一盏暖黄小灯泡提灯，可随时切换成任意 AI 娘的外观。"}
 ]

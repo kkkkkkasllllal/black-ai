@@ -194,8 +194,8 @@ def build_maps(troop_ids):
         return dict(id=event_id, name=name, x=xy[0], y=xy[1], note=note, pages=[page])
 
     menu = selection("巨型大 PSU 电源。\n风扇转动得很平稳。",
-        ["清理缓存", "升级基础 HP", "整理装备", "保存", "读取存档", "离开"],
-        [[script("PSU", action)] if action else [] for action in ("cache", "upgrade", "equip", "save", "load", "")])
+        ["清理缓存", "升级基础 HP", "整理装备", "切换外观", "保存", "读取存档", "离开"],
+        [[script("PSU", action)] if action else [] for action in ("cache", "upgrade", "equip", "skin", "save", "load", "")])
     events = [None] * 23
     for i, x in enumerate((16, 15, 17), 1):
         events[i] = event(i, "巨型大 PSU 电源 · 正面", (x, 12), menu)

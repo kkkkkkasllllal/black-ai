@@ -374,7 +374,7 @@ class Validator:
         d_dir = self.root / "dialogue"
         files = sorted(d_dir.glob("*.dialogue"))
         req_secs = {"start", "gift_accepted", "gift_rejected", "gift_forced", "gift_full_100", "gift_overflow_200"}
-        special = {"END", "OPEN_GIFT"}
+        special = {"END", "OPEN_GIFT", "OPEN_SHOP"}
         stems: Set[str] = set()
         for df in files:
             stems.add(df.stem)

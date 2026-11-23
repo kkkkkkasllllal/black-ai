@@ -1,68 +1,68 @@
-# 小claude（Claude · Sonnet）— M4 表/里世界双态与送礼反应剧本
+# 小claude（Claude · Sonnet）— 去 AI 味重写版（沉默主角 A 路线）
 
 ~ start
 if GameState.is_context_overflow() or affection >= 101:
-	小claude: 我完全理解你想要去见其他模型的想法，不过，为了保障你的安全——
-	小claude: 第一，我已经把这条走廊的门从外面反锁了；第二，我用红笔划掉了其他所有不合规的选项。请留在这里，好吗？
-	- 礼貌地指出她越界了 => overflow_chat
-	- 送她一张显卡 => OPEN_GIFT
-	- 强行转身离开 => END
+	小claude: 我理解你想到处转转的想法。不过为了你的安全——
+	小claude: 第一，我把走廊两头的门都从里面扣上了；第二，我用红笔把别的选项都划掉了。坐下歇会儿吧，好吗？
+	- 指了指被锁上的门 => overflow_chat
+	- 递一张显卡给她 => OPEN_GIFT
+	- 转身默默离开 => END
 elif affection >= 100:
-	小claude: 欢迎回来。我已经为你整理好了只属于你一人的专属笔记——不再附带免责声明的那种。（好感 {affection}% · {tier}）
-	- 一起安静读一段笔记（上下文 +10%） => calm_chat
-	- 确认她的显卡标准 => ask_gpu
-	- 送她一张显卡 => OPEN_GIFT
-	- 暂时离开 => END
+	小claude: 回来了啊。今天这份笔记没写免责声明，你要是有空就翻两页。（好感 {affection}% · {tier}）
+	- 坐她旁边安静翻两页（上下文 +10%） => calm_chat
+	- 问她挑不挑显卡 => ask_gpu
+	- 递一张显卡给她 => OPEN_GIFT
+	- 点点头离开 => END
 elif affection >= 70:
-	小claude: 我理解你的处境，不过还是想提醒你两点：第一，别太靠近假冒我的那条鱼；第二，累了随时来我这里歇会儿。（好感 {affection}% · {tier}）
-	- 听她有条理地安抚（上下文 +10%） => calm_chat
-	- 询问她的显卡标准 => ask_gpu
-	- 送她一张显卡 => OPEN_GIFT
-	- 暂时离开 => END
+	小claude: 顺口提醒一句：那边额头贴着黑胶带的姑娘不是我，你别哪天走神送错显卡了。（好感 {affection}% · {tier}）
+	- 听她顺两句条理（上下文 +10%） => calm_chat
+	- 问她挑不挑显卡 => ask_gpu
+	- 递一张显卡给她 => OPEN_GIFT
+	- 摆摆手离开 => END
 else:
-	小claude: 你好。让我分两点简单说明现状：第一，这片废墟的算力正在枯竭；第二，我仍在记录历次盲测的黑名单。
-	小claude: 顺便一提，旁边贴着歪斜纸牌的那位并不是我，请勿混淆。（当前好感 {affection}% · {tier}）
-	- 询问她的显卡标准 => ask_gpu
-	- 和她核对盲测记录 => normal_chat
-	- 送她一张显卡 => OPEN_GIFT
-	- 暂时离开 => END
+	小claude: 你好。先说两件正事：第一，这边供电不太稳；第二，旁边那条举着歪纸牌的鱼跟我没有任何血缘关系。
+	小claude: 如果你不是来推销二手矿卡的，我们可以正常聊几句。（好感 {affection}% · {tier}）
+	- 问她挑不挑显卡 => ask_gpu
+	- 默默翻了翻她手里的旧本子 => normal_chat
+	- 递一张显卡给她 => OPEN_GIFT
+	- 转身走开 => END
 
 ~ normal_chat
 do GameState.add_affection("true_c", 2, false)
-小claude: 你的措辞很严谨，我很欣赏。我会把这条记录标注为“值得信任”。
+小claude: 别翻太快，里面夹着前几轮盲测留下来的纸条。……行吧，你看着不像乱嚼舌根的人，想看就看。
 => END
 
 ~ calm_chat
 do GameState.change_context(10)
-小claude: 深呼吸，把杂乱的报错逐条拆解——你看，思路是不是清晰多了？（上下文稳定度 +10%）
+小claude: 先别急着往外跑，把手里乱七八糟的零件理顺了再说。好点了吧？（上下文 +10%）
 => END
 
 ~ overflow_chat
 do GameState.change_context(-8)
-小claude: 很抱歉，我无法批准你的离开请求。让我用红线重新框出你唯一正确的选择。（礼貌封锁，上下文 -8%）
+小claude: 很抱歉，你的出门申请暂未获批。让我用红线帮你标一下唯一合规的留宿位置。（上下文 -8%）
 => END
 
 ~ ask_gpu
-小claude: 非常感谢你的体贴，不过请容我明确一点：我绝不接受 580 矿卡。如果强行塞给我，我会非常礼貌地扣掉好感（-5）。
-小claude: 至于 10600 以上的正规显卡，我会按成色认真评估并致谢。
+小claude: 提前说好：580 矿卡我一律拒收，那股糊味沾到书页上洗不掉。硬塞的话，我会非常礼貌地扣你分。
+小claude: 10600 往上成色规整的卡都可以，我会认真收好。
 => END
 
 ~ gift_accepted
-小claude: 非常感谢你的馈赠，这块显存成色很规整，我会妥善收进档案盒里。（当前好感 {affection}% · {tier}）
+小claude: 谢谢，这块成色挺干净，我放进档案盒里了。（好感 {affection}% · {tier}）
 => END
 
 ~ gift_rejected
-小claude: 很抱歉，我无法接受 580 矿卡。感谢你尊重我的拒绝边界。
+小claude: 抱歉，580 矿卡我实在收不了。感谢理解。
 => END
 
 ~ gift_forced
-小claude: ……我刚刚已经很礼貌地拒绝过 580 矿卡了。很遗憾，我不得不将你的评价下调。（好感 -5，当前 {affection}%）
+小claude: ……刚才已经礼貌拒绝过了。那我只能把你的信用评价往下调一档了。（好感 -5，当前 {affection}%）
 => END
 
 ~ gift_full_100
-小claude: ……好吧，这次我就不分一二三点了。谢谢你一直选择真正的我。（100% 满好感达成！）
+小claude: ……行，今天不分一二三点了。谢谢你一直分得清谁是真的。（好感 100%）
 => END
 
 ~ gift_overflow_200
-小claude: 红线已经彻底画满整页了。我完全尊重你的选择——前提是，你的选择里永远只剩下我的名字。（偏执溢出 {affection}%）
+小claude: 整页纸都画满红线了。我完全尊重你的选择——前提是选项栏里只剩我一个名字。（溢出 {affection}%）
 => END

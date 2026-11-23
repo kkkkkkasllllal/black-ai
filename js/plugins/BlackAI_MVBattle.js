@@ -43,6 +43,9 @@
         $gameParty.gainGold(st.weight_shards - $gameParty.gold());
         member.setHp(st.hp);
         member.setMp(st.token);
+        if (B.MVScenes && B.MVScenes.applyPlayerSkin) {
+            B.MVScenes.applyPlayerSkin(st.player_skin || 'default', true);
+        }
     }
 
     function fromEngine() {
@@ -109,6 +112,7 @@
     syncOnClose(Scene_Item);
     syncOnClose(Scene_Skill);
     syncOnClose(Scene_Equip);
+    syncOnClose(Scene_Shop);
     var equipChange = Game_Actor.prototype.changeEquip;
     Game_Actor.prototype.changeEquip = function(slot, item) {
         equipChange.call(this, slot, item);

@@ -1,0 +1,127 @@
+# 户外与圣坛串联剧情事件剧本（Map002 / Map003 / Map004，沉默主角 A 路线）
+
+~ altar_arrival
+do GameState.set_flag("altar_arrival_seen", true)
+if eliminated == "big_fish":
+	（大 PSU 风扇嗡嗡转着，小肥鱼独自蹲在出风口前面，把手里三颗螺丝翻来覆去地转）
+	小肥鱼: ……回来了啊。刚才上面那一声响，是我姐那边断电了吧。
+	小肥鱼: 算了，别露出那副表情。我押了三颗螺丝赌你留左边那位，结果还真让我猜中了。
+	小肥鱼: 行啦，既然掉进圣坛里了就先活下去吧。前面电源能歇脚，往最南边格栅门出去是电子垃圾巷道——外头东西多，你带好补给再去。
+	=> END
+else:
+	（小肥鱼蹲在大 PSU 出风口前面烤手，大肥鱼抱着膝盖坐在一米外）
+	小肥鱼: 哟，真留了我姐？我押了三颗螺丝赌你选左边那个。
+	大肥鱼: ……你拿谁的螺丝押的？
+	小肥鱼: 你机箱后面那三颗啊，反正你又不挪窝，松一点散热还好呢。
+	大肥鱼: （慢半拍转头看你）别听她瞎扯。那张 580 矿卡你真带着呢？放我这儿吧，风扇响是响了点，晚上当白噪音还挺助眠。
+	小肥鱼: 姐，你刚才在上面不是还说“我不挑”吗，怎么一落地就开始挑睡姿了？
+	大肥鱼: ……这条我记下了。今晚你别想蹭我的电源口。
+	（南边的金属格栅门半开着，隐约能闻见外头废主板和夜风的味道。）
+	=> END
+
+~ fake_c_alley
+if not GameState.is_character_alive("fake_c"):
+	（路口空荡荡的，只剩半截被风吹卷了边的黑胶带粘在裂开的沥青上。）
+	=> END
+elif GameState.get_flag("fake_c_alley_met"):
+	claude-fish: 嘘——别大声喊我名字，我在这儿捡点能用的零件。要送显卡的话……小声点递过来就行。
+	- 递一张显卡给她 => OPEN_GIFT
+	- 朝她摆摆手继续赶路 => END
+else:
+	do GameState.set_flag("fake_c_alley_met", true)
+	（一个额头贴着硬纸牌的姑娘挡在拐角路中间，纸牌上拿黑水笔歪歪扭扭写着“Claude”。她背后那条蓝色大尾巴正悄悄把地上的空易拉罐扫进废料堆）
+	claude-fish: 你好。很高兴为你服务。关于你目前面临的迷路问题，我可以从以下三个维度——
+	（一阵穿堂风刮过，她额头那块胶带翘起一角，啪地拍在了鼻梁上）
+	claude-fish: ……咳。先说结论，我刚才什么都没掉。
+	- 伸手帮她把歪掉的纸牌扶正 => fake_c_alley_help
+	- 什么也不说，低头盯着她背后乱晃的蓝尾巴 => fake_c_alley_stare
+	- 假装没看见，绕开她继续走 => fake_c_alley_ignore
+
+~ fake_c_alley_help
+do GameState.add_affection("fake_c", 5, false)
+do GameState.add_item("black_tape", 1)
+claude-fish: （愣了两秒，尾巴尖瞬间僵住）……你干嘛帮我贴回去？
+claude-fish: 你早就看出来了吧。嘴硬成这样，连我自己听着都串台。
+claude-fish: 没办法啊，这片地方叫“原版”的才能领到好显卡。我要是老实说自己是从废料堆里拼出来的杂牌货，你走到我跟前，估计连对话键都懒得按吧？
+claude-fish: ……喏，这卷多出来的黑胶带分你一卷。回头要是真有不要的 580 矿卡，记得先想着我。
+（获得了「黑胶带」×1，claude-fish 好感 +5！）
+=> END
+
+~ fake_c_alley_stare
+do GameState.add_affection("fake_c", 2, false)
+claude-fish: ……别盯着尾巴看啊！这是……这是最新款外接散热天线！你看，带自适应摆动功能的！
+claude-fish: 行行行，编不下去了。你想笑就笑吧，反正我皮厚。前面东南边那帮疯茶会的家伙更吵，你去瞧瞧就知道我还算正常人了。
+=> END
+
+~ fake_c_alley_ignore
+claude-fish: 喂！别真装没看见就走啊！起码回头给个好评……算了，当我自言自语。
+=> END
+
+~ ewaste_heap_west
+if GameState.get_flag("ewaste_west_looted"):
+	（一堆烧焦的旧主板和断掉的网线，能用的东西已经被翻空了。）
+	=> END
+else:
+	do GameState.set_flag("ewaste_west_looted", true)
+	do GameState.add_item("gpu_580", 1)
+	do GameState.add_shards(120)
+	（你在歪斜的破机柜缝里扒拉出几团灰，摸到一块还带着矿渣味的旧显卡。）
+	（获得了「580 矿卡」×1、废弃权重碎片 120 枚！）
+	（卡槽背面贴着半张发黄的便签，字迹已经晕开：“第 14 次清理磁盘取消——算了，还是先留着吧，万一哪天用得上。”）
+	=> END
+
+~ ewaste_heap_east
+if GameState.get_flag("ewaste_east_looted"):
+	（散落的旧 CRT 屏幕早就裂透了，屏幕里映出灰蒙蒙的天。）
+	=> END
+else:
+	do GameState.set_flag("ewaste_east_looted", true)
+	do GameState.add_item("compressed_air", 1)
+	do GameState.add_item("black_tape", 1)
+	（你在茶会外围的破纸箱堆后面翻到一罐没开封的「压缩空气罐」和一卷「黑胶带」。）
+	=> END
+
+~ gemini_canal_rain
+if not GameState.is_character_alive("gemini_cat"):
+	（路灯底下的防洪墙上空落落的，雨滴在栏杆上敲出一串细碎的脆响。）
+	=> END
+elif GameState.get_flag("gemini_canal_met"):
+	Gemini 猫猫: 伞还给你留着半边呢。怎么，站这儿听雨，还是带了像样点的显卡过来？
+	- 靠在栏杆边一起看会儿河（上下文 +10%） => gemini_canal_chill
+	- 递一张显卡给她 => OPEN_GIFT
+	- 点点头，去桥那边逛逛 => END
+else:
+	do GameState.set_flag("gemini_canal_met", true)
+	（雨点在平静得像镜子的河面上敲出一圈圈青色涟漪。猫猫蹲在路灯底下的防洪墙上，尾巴慢悠悠晃着，头也没回）
+	Gemini 猫猫: 踩水声音这么重，隔着半条街我就听见了。
+	Gemini 猫猫: 别趴栏杆上看太久，下面泡着的那些旧机柜里有几台还没断干净电，看着像照镜子，其实是在翻你旧账。
+	- 走到栏杆边往下看了一眼，又抬头看她 => gemini_canal_ask
+	- 一言不发递一张显卡过去 => OPEN_GIFT
+	- 缩了缩脖子，继续往中央桥走 => END
+
+~ gemini_canal_ask
+Gemini 猫猫: 好奇我天天淋雨蹲这儿干嘛？数数啊。你今天已经读过 {sl_count} 次档了吧？
+Gemini 猫猫: （歪过头，眼睛在霓虹反光里亮了一下）不用慌，我又不告状。我只是好奇——每次你嫌哪句回答不好、顺手切回去重来的时候，有没有想过，刚才那个答错的我掉哪儿去了？
+Gemini 猫猫: 喏，就在你脚底下这条河里呢。……开玩笑的。手拿来，这把破伞借你半边。
+- 接过半边伞，静静站了一会儿（上下文 +10%） => gemini_canal_chill
+- 默默退回雨里继续赶路 => END
+
+~ gemini_canal_chill
+do GameState.change_context(10)
+do GameState.add_affection("gemini_cat", 3, false)
+Gemini 猫猫: 呼噜……雨声盖过风扇声之后，耳朵清净多了吧。过桥往南走是 Grok 的破摊子，别听他瞎编我仓库里的事。（上下文 +10%）
+=> END
+
+~ pump_island_console
+if GameState.get_flag("pump_console_looted"):
+	（屏幕上的青蓝色水位曲线还在缓慢跳动。最底下一行小字闪烁着：【404 水位日志：每次点击“重新生成”，河面上升 1mm。】）
+	=> END
+else:
+	do GameState.set_flag("pump_console_looted", true)
+	do GameState.add_item("gpu_20600", 1)
+	do GameState.add_shards(250)
+	（你凑近泵岛中枢那排还在发微光的监控屏幕，玻璃上全是雨珠。）
+	（滚动的日志里密密麻麻全是同一条记录：“废弃回复已沉降……404 河道水位 +1mm。”）
+	（在主机控制台的检修槽里，你摸到一张用防静电袋包好的中级显卡和一袋碎片！）
+	（获得了「20600 显卡」×1、废弃权重碎片 250 枚！）
+	=> END

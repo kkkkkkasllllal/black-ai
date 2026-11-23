@@ -273,6 +273,10 @@
             if (this._cb.onAction) {
                 this._cb.onAction('open_gift');
             }
+        } else if (target === 'OPEN_SHOP') {
+            if (this._cb.onAction) {
+                this._cb.onAction('open_shop');
+            }
         } else if (!this.jumpToSection(target)) {
             this._finish();
         }
@@ -340,6 +344,8 @@
         if (token === 'affection') return State.getAffection(this._characterId);
         if (token === 'context') return State.context;
         if (token === 'sl_count') return GM.sl_count;
+        if (token === 'eliminated') return State.eliminated_character || '';
+        if (token === 'player_skin') return State.player_skin || 'default';
         if (token === 'GameState.is_context_overflow()') return State.isContextOverflow();
         if (token === 'GameState.is_context_critical()') return State.isContextCritical();
 
@@ -347,6 +353,10 @@
         if (mAff) return State.getAffection(mAff[1]);
         var mAlive = token.match(/^GameState\.is_character_alive\(["']([^"']+)["']\)$/);
         if (mAlive) return State.isCharacterAlive(mAlive[1]);
+        var mFlag = token.match(/^GameState\.get_flag\(["']([^"']+)["']\)$/);
+        if (mFlag) return (State.story_flags && State.story_flags[mFlag[1]]) || false;
+        var mItem = token.match(/^GameState\.has_item\(["']([^"']+)["']\)$/);
+        if (mItem) return State.hasItem(mItem[1], 1);
         return false;
     };
 
@@ -366,6 +376,31 @@
         var mHp = expr.match(/^GameState\.change_hp\(\s*(-?\d+)\s*\)$/);
         if (mHp) {
             State.changeHp(Number(mHp[1]));
+            return;
+        }
+        var mSetFlag = expr.match(/^GameState\.set_flag\(\s*["']([^"']+)["']\s*,\s*(true|false|["'][^"']*["'])\s*\)$/);
+        if (mSetFlag) {
+            var rawVal = mSetFlag[2];
+            var parsedVal = rawVal === 'true' ? true : (rawVal === 'false' ? false : rawVal.slice(1, -1));
+            State.story_flags = State.story_flags || {};
+            State.story_flags[mSetFlag[1]] = parsedVal;
+            return;
+        }
+        var mAddItem = expr.match(/^GameState\.add_item\(\s*["']([^"']+)["']\s*(?:,\s*(\d+)\s*)?\)$/);
+        if (mAddItem) {
+            var cnt = mAddItem[2] ? Number(mAddItem[2]) : 1;
+            State.addItem(mAddItem[1], cnt);
+            if (BlackAI.NativeParty && BlackAI.NativeParty.toEngine) {
+                BlackAI.NativeParty.toEngine();
+            }
+            return;
+        }
+        var mShards = expr.match(/^GameState\.add_shards\(\s*(-?\d+)\s*\)$/);
+        if (mShards) {
+            State.addWeightShards(Number(mShards[1]));
+            if (BlackAI.NativeParty && BlackAI.NativeParty.toEngine) {
+                BlackAI.NativeParty.toEngine();
+            }
             return;
         }
     };

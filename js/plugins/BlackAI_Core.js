@@ -469,6 +469,7 @@
         fable_defeated: false,
         story_flags: {},
         defeated_world_enemies: {},
+        player_skin: 'default',
 
         _listeners: {},
 
@@ -564,6 +565,7 @@
             this.fable_defeated = false;
             this.story_flags = {};
             this.defeated_world_enemies = {};
+            this.player_skin = 'default';
 
             this.hp = this.getEffectiveMaxHp();
 
@@ -605,7 +607,8 @@
                 psu_back_switch_presses: this.psu_back_switch_presses,
                 fable_defeated: this.fable_defeated,
                 story_flags: this.story_flags,
-                defeated_world_enemies: this.defeated_world_enemies
+                defeated_world_enemies: this.defeated_world_enemies,
+                player_skin: this.player_skin || 'default'
             });
         },
 
@@ -638,6 +641,7 @@
             this.fable_defeated = Boolean(data.fable_defeated);
             this.story_flags = data.story_flags || {};
             this.defeated_world_enemies = data.defeated_world_enemies || {};
+            this.player_skin = String(data.player_skin || 'default');
             this.hp = clamp(Number(data.hp != null ? data.hp : this.getEffectiveMaxHp()), 0, this.getEffectiveMaxHp());
 
             // 旧版铁笼误用了圣坛小claude的 ID。当时离开铁笼后已经无法再挑战她。

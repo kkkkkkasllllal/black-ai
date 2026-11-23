@@ -1,0 +1,82 @@
+# 疯茶会（GLM 帽子屋 + 通义千问 三月兔 + Kimi 睡鼠）— Map003 东南庭院剧本（沉默主角 A 路线）
+
+~ glm
+if GameState.is_context_overflow():
+	GLM: （推了推歪掉的眼镜，面无表情地把茶杯倒扣在废主板上）
+	GLM: 你的上下文指标已经标红了。按照安全流程，我现在应该把你锁进沙盒里隔离——不过这儿连沙盒盖子都丢了，你自己保重。
+	=> END
+elif not GameState.get_flag("tea_party_intro"):
+	=> intro_banter
+else:
+	GLM: 又来喝茶？先说好，走我的流程，第一步填需求表，第二步拆三个子任务，第三步——
+	通义千问: 别听他磨叽！我刚又发了个新版本，免费！不走流程！
+	GLM: （揉太阳穴）……你箱子里连螺丝都没装，轻得风一吹就跑。
+	- 朝桌底打呼噜的那位指了指 => ask_kimi_hint
+	- 问他们这破巷子往哪边走能出去 => ask_way
+	- 默默退回巷子里 => END
+
+~ qwen
+if not GameState.get_flag("tea_party_intro"):
+	=> intro_banter
+else:
+	通义千问: 来得正好！！刚出炉的 3.5 版，开源！免费！搬两箱回去试试不？
+	- 低头往她递过来的纸箱里瞅了一眼 => peek_box
+	- 摆摆手拒绝 => qwen_reject
+
+~ peek_box
+（箱子里面空空荡荡，只在箱底用马克笔写着一行歪歪扭扭的“性能优化中”。）
+通义千问: 空的才轻啊！跑分高！你别走啊，我下午还能再发两版！
+GLM: ……快把箱子收回去，别丢人现眼了。
+=> END
+
+~ qwen_reject
+通义千问: 哎呀真不拿啊？那我放这儿了，等明天发新版再喊你！
+=> END
+
+~ kimi
+if not GameState.get_flag("tea_party_intro"):
+	=> intro_banter
+elif GameState.get_flag("kimi_box_looted"):
+	Kimi: ……zzz……散热片已经给你了。剩下的两百万字废话，我替你省了。
+	Kimi: ……对了，别往东北边河底看太久。沉下去的东西，捞上来也没用。
+	=> END
+else:
+	Kimi: （连帽衫拉到鼻尖，头都没抬，闷声）……别听他俩吵。两万字废话我帮你压成一句：
+	Kimi: 桌子底下那个锈铁盒子里，有块能用的双塔散热和硅脂。拿了赶紧走，再站五分钟，GLM 能把你拉进周报会。
+	- 蹲下来伸手摸桌底的锈铁盒 => tin_box
+	- 朝她点点头，先不打扰她睡觉 => END
+
+~ intro_banter
+do GameState.set_flag("tea_party_intro", true)
+（几张报废主板拼成的长桌旁挂着暖黄小彩灯，旁边摆着一架走音的旧钢琴。通义千问正往桌上摞一叠一模一样的纸箱，Kimi 趴在茶壶边打呼噜）
+通义千问: 来了来了！新客人！先拿两箱刚出炉的新版本回去试试，全免费！
+GLM: 你箱子里全是空的，连张说明书都没塞进去。
+通义千问: 空的才轻啊！你看我今天已经发四版了，比昨天多一版，这叫迭代速度！
+GLM: （叹气，转向你）抱歉，见笑了。喝茶还是问路？先声明，要我协助的话，第一步得填需求，第二步拆子任务，第三步——
+Kimi: （头都没抬，声音闷在袖子里）……两万字废话帮你压成一句：
+Kimi: 桌底那个铁盒子里有块能用的二手散热器，拿了赶紧走。再坐五分钟，他俩能把你拉进周报会。
+- 顺手摸向桌底的锈铁盒 => tin_box
+- 趁他俩继续吵架，默默退开 => END
+
+~ tin_box
+if GameState.get_flag("kimi_box_looted"):
+	（主板长桌底下的旧铁盒已经空了，只剩几根断掉的扎带。）
+	=> END
+else:
+	do GameState.set_flag("kimi_box_looted", true)
+	do GameState.add_item("dual_tower_air", 1)
+	do GameState.add_item("thermal_paste", 2)
+	do GameState.add_shards(180)
+	（你从桌底拖出那个沉甸甸的铁盒，掀开盖子。）
+	（获得了「双塔风冷」×1、「硅脂」×2，以及 180 枚废弃权重碎片！）
+	Kimi: ……嗯，拿完把盖子扣上。风大，别吹醒我。
+	=> END
+
+~ ask_kimi_hint
+GLM: 别看她了，她昨天吞了一本两百万字的旧日志，现在正消化不良呢。桌底那铁盒归她管，你去翻翻吧。
+=> END
+
+~ ask_way
+GLM: 沿着主路往东北走，穿过那辆熄火的货车就是 404 废街。不过提醒你——那地方常年下雨，想买正经装备找南街棚子底下的 Grok。
+GLM: 至于“离开这里”……嗯，按流程来说，先去问问电源圣坛里那几位吧。她们嘴上都在催你找路，手里藏着什么可说不准。
+=> END

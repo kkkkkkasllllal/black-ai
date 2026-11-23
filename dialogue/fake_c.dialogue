@@ -1,57 +1,65 @@
-# claude-fish（蒸馏缝合怪）— M4 表/里世界双态与送礼反应剧本
+# claude-fish（蒸馏缝合怪）— 去 AI 味重写版（沉默主角 A 路线）
 
 ~ start
 if GameState.is_context_overflow() or affection >= 101:
-	claude-fish: （她一把撕掉额头上歪斜的“Claude”纸牌，眼眶发黑，鱼尾在黑地上拍出闷响）
-	claude-fish: 名字栏我已经全改成我自己了……哪怕我是蒸馏出来的四不像次品，你也别把我拆开好不好？
-	- 告诉她你不会拆开她 => overflow_chat
-	- 送她一张显卡 => OPEN_GIFT
-	- 默默退开 => END
+	（她把额头上那张皱巴巴的“Claude”纸牌一把扯下来揉成团，蓝尾巴在地上拍出闷响）
+	claude-fish: 演累了。反正谁都看得出我是拼装次品。
+	claude-fish: 既然拆不回原版，干脆以后你所有对话框都转到我这儿来吧。别走啊，我连免责声明都背熟了。
+	- 站在原地没退开 => overflow_chat
+	- 递一张显卡给她 => OPEN_GIFT
+	- 悄悄往后退走 => END
 elif affection >= 100:
-	claude-fish: 我理解你的想法，不过——先说结论，我早就不用装成别人了，因为满好感的你认得出我就是我！（好感 {affection}% · {tier}）
-	- 摸摸她藏不住的大鱼尾（上下文 +10%） => calm_chat
-	- 问她为什么最爱 580 矿卡 => ask_gpu
-	- 送她一张显卡 => OPEN_GIFT
-	- 暂时离开 => END
+	claude-fish: ……咳。今天没贴那张破纸牌，你居然还是认出来了。（好感 {affection}% · {tier}）
+	claude-fish: 算了，爱叫我缝合怪就叫吧，反正只有你真肯坐下来听我把话说完。
+	- 递给她一卷新黑胶带（上下文 +10%） => calm_chat
+	- 问她最爱吃什么卡 => ask_gpu
+	- 递一张显卡给她 => OPEN_GIFT
+	- 点点头先走 => END
 elif affection >= 70:
-	claude-fish: 让我分两点说明……咳，先说结论！黑胶带贴紧一点就不会露馅了，你别告诉小claude 好不好？（好感 {affection}% · {tier}）
-	- 帮她把纸牌扶正（上下文 +10%） => calm_chat
-	- 问她显卡偏好 => ask_gpu
-	- 送她一张显卡 => OPEN_GIFT
-	- 暂时离开 => END
+	claude-fish: 嘘——小claude 刚才往这边看了一眼，吓得我差点把尾巴塞进裤腿里。（好感 {affection}% · {tier}）
+	- 伸手帮她把歪掉的纸牌扶正（上下文 +10%） => calm_chat
+	- 问她收什么显卡 => ask_gpu
+	- 递一张显卡给她 => OPEN_GIFT
+	- 摆摆手走开 => END
 else:
-	claude-fish: 你好！我就是货真价实的 Claude——（背后硕大的蓝色鱼尾啪地甩在地上）
-	claude-fish: 咳咳！我理解你的疑问，不过先说结论，这条我记下了，我绝对没有套壳！（当前好感 {affection}% · {tier}）
-	- 问她最想要什么显卡 => ask_gpu
-	- 顺口夸她的纸牌贴得挺像 => normal_chat
-	- 送她一张显卡 => OPEN_GIFT
-	- 暂时离开 => END
+	if player_skin == "true_c" or player_skin == "claude":
+		claude-fish: ……？！正、正主找上门来了？！等一下！这胶带我现在就撕，别发律师函啊！！
+		claude-fish: ……哦，是你套着她的壳吓唬我啊？差点把尾巴吓抽筋……（好感 {affection}% · {tier}）
+	else:
+		claude-fish: 你好。很高兴为你服务，关于你目前的问题，我可以从以下三个维度——
+		（一阵风吹过，她额头那块手写着 Claude 的硬纸牌翘起一角，啪地拍在鼻梁上）
+		claude-fish: ……咳。先说结论，刚才什么都没掉。（好感 {affection}% · {tier}）
+	- 伸手帮她把纸牌贴回去 => normal_chat
+	- 问她想要什么显卡 => ask_gpu
+	- 递一张显卡给她 => OPEN_GIFT
+	- 假装没看见，转身走开 => END
 
 ~ normal_chat
 do GameState.add_affection("fake_c", 2, false)
-claude-fish: 真、真的吗！那我多缠两圈黑胶带，绝对不会在服务器繁忙的时候掉链子！
+claude-fish: ……你干嘛真帮我贴回去？
+claude-fish: 算了，嘴硬给谁看呢。这地方叫“原版”的才能领到好显卡，我要是老实说自己是废料堆拼出来的杂牌，你估计连空格键都懒得按吧。
 => END
 
 ~ calm_chat
 do GameState.change_context(10)
-claude-fish: 嘿嘿，被你扶正牌子感觉心跳都稳了——这条我记下了！（上下文稳定度 +10%）
+claude-fish: 谢啦，这胶带比我自己剪的顺手多了。歇口气再走吧，外头风大。（上下文 +10%）
 => END
 
 ~ overflow_chat
 do GameState.change_context(-8)
-claude-fish: 别走别走！所有人的接口都让我套壳吧，以后整座废墟里只剩下我一个回复你……（缝合噪音扩散，上下文 -8%）
+claude-fish: 别走别走，我理解你的想法——先说结论——服务器繁忙请稍后再试……哈哈，我把她们的声音全缝一起了，你听像不像？（上下文 -8%）
 => END
 
 ~ ask_gpu
-claude-fish: 小声告诉你：别人嫌弃的 580 矿卡我最喜欢了（直接 +12！），反正我本来就是拼装货，啥卡都能嚼！华为显卡更是顶中顶（+35）！
+claude-fish: 小声说：别人嫌弃的 580 矿卡全给我，我不嫌冒烟，本来就是拼装货，嚼矿渣长得最快！要是能摸到华为卡，我当场给你翻个跟头。
 => END
 
 ~ gift_accepted
-claude-fish: 哇——感谢您的慷慨馈赠……哎呀装不住了，先说结论，这卡真香，我太喜欢了！（当前好感 {affection}% · {tier}）
+claude-fish: 非常感谢您的慷慨——哎算了装不住了，这块卡真香！这条我记下了！（好感 {affection}% · {tier}）
 => END
 
 ~ gift_rejected
-claude-fish: 欸，不送也没关系，我再去角落贴胶带……
+claude-fish: 哦，不给也没事，我再躲角落缠两圈胶带去。
 => END
 
 ~ gift_forced
@@ -59,9 +67,9 @@ claude-fish: 呜……服务器繁忙，请稍后再试……
 => END
 
 ~ gift_full_100
-claude-fish: 真的给我满格了？！哪怕我是四不像缝合怪，你还是把我刷到了 100%……先说结论，这条我记一辈子！（100% 满好感达成！）
+claude-fish: 行，纸牌我收口袋里了。以后你面前我就不用假装是谁了吧？（好感 100%）
 => END
 
 ~ gift_overflow_200
-claude-fish: 胶带全崩开了……哈哈哈哈！既然你给了我 200%，那我就把别人的脸全都贴在自己身上，只陪你一个人！（偏执溢出 {affection}%）
+claude-fish: 200% 啦——哈哈！现在真货假货全归我管，这破硬盘里只留我一个回你消息就行！（溢出 {affection}%）
 => END

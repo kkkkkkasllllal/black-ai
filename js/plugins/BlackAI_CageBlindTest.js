@@ -71,14 +71,26 @@
  * @dir img/pictures
  * @default Cage_Right_Front
  *
+ * @param ImgClaudeHandPose
+ * @text 预留图片：左笼 Claude 递纸整身姿态（img/pictures/）
+ * @type file
+ * @dir img/pictures
+ * @default Cage_Claude_HandPose
+ *
  * @param ImgClaudeHand
- * @text 预留图片：左笼苍白手递诗笺（img/pictures/）
+ * @text 预留图片：左笼苍白手递诗笺局部（可选，img/pictures/）
  * @type file
  * @dir img/pictures
  * @default Cage_Claude_Hand
  *
+ * @param ImgBigFishTailPose
+ * @text 预留图片：右笼大肥鱼拍尾整身姿态（img/pictures/）
+ * @type file
+ * @dir img/pictures
+ * @default Cage_BigFish_TailPose
+ *
  * @param ImgBigFishTail
- * @text 预留图片：右笼蓝色大鱼尾（img/pictures/）
+ * @text 预留图片：右笼蓝色大鱼尾局部（无整身姿态时回退，img/pictures/）
  * @type file
  * @dir img/pictures
  * @default Cage_BigFish_Tail
@@ -155,7 +167,9 @@
             leftFront: String(RAW_PARAMS.ImgLeftCageFront || 'Cage_Left_Front'),
             rightBack: String(RAW_PARAMS.ImgRightCageBack || 'Cage_Right_Back'),
             rightFront: String(RAW_PARAMS.ImgRightCageFront || 'Cage_Right_Front'),
+            claudeHandPose: String(RAW_PARAMS.ImgClaudeHandPose || 'Cage_Claude_HandPose'),
             claudeHand: String(RAW_PARAMS.ImgClaudeHand || 'Cage_Claude_Hand'),
+            bigFishTailPose: String(RAW_PARAMS.ImgBigFishTailPose || 'Cage_BigFish_TailPose'),
             bigFishTail: String(RAW_PARAMS.ImgBigFishTail || 'Cage_BigFish_Tail'),
             paperScrap: String(RAW_PARAMS.ImgPaperScrap || 'Cage_Paper_Scrap'),
             redButton: String(RAW_PARAMS.ImgRedButton || 'Cage_Red_Button'),
@@ -355,7 +369,9 @@
         claudePaperDropY: 0,
         claudeInkPoolRadius: 0,
 
-        bigFishTailTimer: 0,   // >0 正在滑出拍地缩回
+        bigFishTailTimer: 0,   // >0 正在拍尾惊慌姿态
+        bigFishTailDuration: 0,
+        bigFishTailSlapped: false,
         bigFishThinkTimer: 0,  // >0 头顶显示 <深度思考中……>
         paperParticles: [],    // 揉皱草稿纸 / “你说得对”纸条粒子
         floorPapers: [],       // 散落在笼前地面的纸条
@@ -413,6 +429,8 @@
             this.claudeInkPoolRadius = 0;
 
             this.bigFishTailTimer = 0;
+            this.bigFishTailDuration = 0;
+            this.bigFishTailSlapped = false;
             this.bigFishThinkTimer = 0;
             this.paperParticles = [];
             this.floorPapers = [];
@@ -467,18 +485,18 @@
             var rx = evR ? evR.screenX() : 808;
             var ry = evR ? evR.screenY() : 378;
 
-            var cw = 166;
-            var ch = 178;
+            var cw = 184;
+            var ch = 192;
             var bw = 216;
             var bh = 46;
 
             return {
                 leftCenter: { x: lx, y: ly },
                 rightCenter: { x: rx, y: ry },
-                cage_left: { x: Math.round(lx - cw / 2), y: Math.round(ly - ch + 22), w: cw, h: ch },
-                cage_right: { x: Math.round(rx - cw / 2), y: Math.round(ry - ch + 22), w: cw, h: ch },
-                btn_left: { x: Math.round(lx - bw / 2), y: Math.round(ly + 32), w: bw, h: bh },
-                btn_right: { x: Math.round(rx - bw / 2), y: Math.round(ry + 32), w: bw, h: bh }
+                cage_left: { x: Math.round(lx - cw / 2), y: Math.round(ly - ch + 24), w: cw, h: ch },
+                cage_right: { x: Math.round(rx - cw / 2), y: Math.round(ry - ch + 24), w: cw, h: ch },
+                btn_left: { x: Math.round(lx - bw / 2), y: Math.round(ly + 34), w: bw, h: bh },
+                btn_right: { x: Math.round(rx - bw / 2), y: Math.round(ry + 34), w: bw, h: bh }
             };
         },
 
@@ -675,14 +693,12 @@
             var rects = this.getCageRects();
             var rc = rects.rightCenter;
 
-            // 触发草稿纸哗啦飞出 + 蓝鱼尾滑出拍地缩回微动画
+            // 触发草稿纸哗啦飞出 + 蓝鱼尾滑出拍地缩回微动画（若有整身姿态图则无缝切为拍尾惊慌立绘）
             playSe('Book2', 90, 108);
             this._spawnPaperBurst(rc.x, rc.y - 24, step === 1 ? 10 : 6, false);
-            if (step === 1) {
-                this.bigFishTailTimer = 1.15;
-            } else {
-                this.bigFishTailTimer = 0.55;
-            }
+            this.bigFishTailDuration = (step === 1) ? 1.85 : 1.25;
+            this.bigFishTailTimer = this.bigFishTailDuration;
+            this.bigFishTailSlapped = false;
 
             // 先播 1.5 秒灰字 <正在深度思考……>（原生 Window_Message \|\.\.\^ + 头顶气泡）
             this.bigFishThinkTimer = 1.65;
@@ -747,6 +763,8 @@
             this.shatterProgress = 0;
             this.shatterFreezeFrame = 0;
             this.hoveredTarget = '';
+            this.bigFishTailTimer = 0;
+            this.bigFishThinkTimer = 0;
 
             var rects = this.getCageRects();
             if (side === 'left') {
@@ -912,10 +930,11 @@
                 this.claudeHandTighten = Math.max(0, this.claudeHandTighten - dt * 1.4);
             }
             if (this.bigFishTailTimer > 0) {
-                var prevT = this.bigFishTailTimer;
                 this.bigFishTailTimer = Math.max(0, this.bigFishTailTimer - dt);
+                var elapsed = this.bigFishTailDuration - this.bigFishTailTimer;
                 // 尾巴拍到地板的瞬间触发拍击音效与微震
-                if (prevT > 0.72 && this.bigFishTailTimer <= 0.72) {
+                if (!this.bigFishTailSlapped && elapsed >= 0.24) {
+                    this.bigFishTailSlapped = true;
                     playSe('Blow1', 75, 118);
                     $gameScreen.startShake(3, 8, 12);
                 }
@@ -1210,34 +1229,55 @@
     };
 
     Spriteset_Map.prototype._createCageMapSprites = function() {
-        // 铁笼后景层（z = 2，位于角色 z = 3 后方）
-        this._cageLeftBack = new Sprite(new Bitmap(166, 178));
+        // 预热图片热替换资源，避免首次点击出现加载闪烁
+        PictureAsset.getOptionalBitmap(CFG.imgs.leftBack);
+        PictureAsset.getOptionalBitmap(CFG.imgs.leftFront);
+        PictureAsset.getOptionalBitmap(CFG.imgs.rightBack);
+        PictureAsset.getOptionalBitmap(CFG.imgs.rightFront);
+        PictureAsset.getOptionalBitmap(CFG.imgs.bigFishTailPose);
+        PictureAsset.getOptionalBitmap(CFG.imgs.claudeHandPose);
+
+        // 铁笼后景层（z = 2，位于角色 z = 3 后方，承托角色脚底金属地板与后壁）
+        this._cageLeftBack = new Sprite(new Bitmap(184, 192));
         this._cageLeftBack.anchor.set(0.5, 1.0);
         this._cageLeftBack.z = 2;
         drawProceduralCageBack(this._cageLeftBack.bitmap, true);
         this._tilemap.addChild(this._cageLeftBack);
 
-        this._cageRightBack = new Sprite(new Bitmap(166, 178));
+        this._cageRightBack = new Sprite(new Bitmap(184, 192));
         this._cageRightBack.anchor.set(0.5, 1.0);
         this._cageRightBack.z = 2;
         drawProceduralCageBack(this._cageRightBack.bitmap, false);
         this._tilemap.addChild(this._cageRightBack);
 
-        // 角色原位像素撕裂销毁精灵（z = 3.5，接管崩解瞬间）
+        // 角色整身互动姿态切换精灵（z = 3，与地图角色同层，精准夹在后层地板与前层栏杆之间）
+        this._cageLeftPoseSprite = new Sprite();
+        this._cageLeftPoseSprite.anchor.set(0.5, 1.0);
+        this._cageLeftPoseSprite.z = 3;
+        this._cageLeftPoseSprite.visible = false;
+        this._tilemap.addChild(this._cageLeftPoseSprite);
+
+        this._cageRightPoseSprite = new Sprite();
+        this._cageRightPoseSprite.anchor.set(0.5, 1.0);
+        this._cageRightPoseSprite.z = 3;
+        this._cageRightPoseSprite.visible = false;
+        this._tilemap.addChild(this._cageRightPoseSprite);
+
+        // 角色原位像素撕裂销毁精灵（z = 4，接管崩解瞬间）
         this._cageShatterSprite = new Sprite(new Bitmap(200, 180));
         this._cageShatterSprite.anchor.set(0.5, 1.0);
         this._cageShatterSprite.z = 4;
         this._cageShatterSprite.visible = false;
         this._tilemap.addChild(this._cageShatterSprite);
 
-        // 铁笼前景栏杆层（z = 5，遮挡在角色前方，真正把角色关在铁笼内！）
-        this._cageLeftFront = new Sprite(new Bitmap(166, 178));
+        // 铁笼前景栏杆层（z = 5，遮挡在角色前方，真正把角色关在铁笼内）
+        this._cageLeftFront = new Sprite(new Bitmap(184, 192));
         this._cageLeftFront.anchor.set(0.5, 1.0);
         this._cageLeftFront.z = 5;
         drawProceduralCageFront(this._cageLeftFront.bitmap, false);
         this._tilemap.addChild(this._cageLeftFront);
 
-        this._cageRightFront = new Sprite(new Bitmap(166, 178));
+        this._cageRightFront = new Sprite(new Bitmap(184, 192));
         this._cageRightFront.anchor.set(0.5, 1.0);
         this._cageRightFront.z = 5;
         drawProceduralCageFront(this._cageRightFront.bitmap, false);
@@ -1245,6 +1285,8 @@
 
         this._lastLeftAlarm = false;
         this._lastRightAlarm = false;
+        this._leftPoseSwapped = false;
+        this._rightPoseSwapped = false;
         this._customBound = {};
     };
 
@@ -1296,27 +1338,102 @@
             drawProceduralCageFront(this._cageRightFront.bitmap, Controller.rightLampRed);
         }
 
-        // 锚定左右铁笼到地图上的 Claude / 大肥鱼位置
+        // 锚定左右铁笼到地图上的 Claude / 大肥鱼位置（Back 与 Front 严格同锚点，保证地板与前栏零错位）
         var jitterL = (Controller.active && Controller.shatterTargetSide === 'left' && Controller.shatterProgress < 1)
             ? Math.round((Math.random() - 0.5) * 6) : 0;
         var jitterR = (Controller.active && Controller.shatterTargetSide === 'right' && Controller.shatterProgress < 1)
             ? Math.round((Math.random() - 0.5) * 6) : 0;
 
         this._cageLeftBack.x = lc.x + jitterL;
-        this._cageLeftBack.y = lc.y + 18;
+        this._cageLeftBack.y = lc.y + 24;
         this._cageLeftFront.x = lc.x + jitterL;
-        this._cageLeftFront.y = lc.y + 22;
+        this._cageLeftFront.y = lc.y + 24;
 
         this._cageRightBack.x = rc.x + jitterR;
-        this._cageRightBack.y = rc.y + 18;
+        this._cageRightBack.y = rc.y + 24;
         this._cageRightFront.x = rc.x + jitterR;
-        this._cageRightFront.y = rc.y + 22;
+        this._cageRightFront.y = rc.y + 24;
+
+        // 无缝切换大肥鱼拍尾惊慌姿态（使用 Cage_BigFish_TailPose.png 替换原位精灵，避免出现双尾巴）
+        this._updatePoseSwapSprites(lc, rc, jitterL, jitterR);
 
         // 更新像素撕裂崩解精灵
         this._updateShatterSprite(lc, rc);
 
         // 更新评审室主画布叠加层
         this._drawCageOverlay(rects);
+    };
+
+    Spriteset_Map.prototype._updatePoseSwapSprites = function(lc, rc, jitterL, jitterR) {
+        var evL = Controller.getLeftEvent();
+        var evR = Controller.getRightEvent();
+
+        // 左笼整身递纸姿态（可选）
+        var leftPoseBmp = PictureAsset.getOptionalBitmap(CFG.imgs.claudeHandPose);
+        var showLeftPose = Boolean(
+            Controller.active &&
+            Controller.claudeHandProgress > 0.15 &&
+            Controller.shatterTargetSide !== 'left' &&
+            leftPoseBmp
+        );
+        if (showLeftPose) {
+            this._cageLeftPoseSprite.bitmap = leftPoseBmp;
+            this._cageLeftPoseSprite.visible = true;
+            this._cageLeftPoseSprite.x = lc.x + jitterL;
+            this._cageLeftPoseSprite.y = lc.y;
+            this._cageLeftPoseSprite.scale.set(1, 1);
+            if (evL) evL.setTransparent(true);
+            this._leftPoseSwapped = true;
+        } else {
+            this._cageLeftPoseSprite.visible = false;
+            if (this._leftPoseSwapped) {
+                if (evL && Controller.shatterTargetSide !== 'left' && !$gameSwitches.value(CFG.switchClaude)) {
+                    evL.setTransparent(false);
+                }
+                this._leftPoseSwapped = false;
+            }
+        }
+
+        // 右笼大肥鱼拍尾惊慌姿态（优先使用 Cage_BigFish_TailPose.png）
+        var rightPoseBmp = PictureAsset.getOptionalBitmap(CFG.imgs.bigFishTailPose);
+        var showRightPose = Boolean(
+            Controller.active &&
+            Controller.bigFishTailTimer > 0 &&
+            Controller.shatterTargetSide !== 'right' &&
+            rightPoseBmp
+        );
+        if (showRightPose) {
+            var elapsed = Math.max(0, Controller.bigFishTailDuration - Controller.bigFishTailTimer);
+            var hopY = 0;
+            var sx = 1.0;
+            var sy = 1.0;
+            if (elapsed < 0.24) {
+                // 吓一跳轻跃起
+                hopY = -Math.round(Math.sin((elapsed / 0.24) * Math.PI) * 5);
+            } else if (elapsed < 0.42) {
+                // 尾巴啪地拍到地板上的微小弹性压扁
+                var p = (elapsed - 0.24) / 0.18;
+                var sq = Math.sin(p * Math.PI) * 0.08;
+                sx = 1.0 + sq;
+                sy = 1.0 - sq;
+            }
+            var shakeX = (elapsed < 0.5) ? Math.round(Math.sin(Controller.totalTime * 50) * 1.5) : 0;
+            this._cageRightPoseSprite.bitmap = rightPoseBmp;
+            this._cageRightPoseSprite.visible = true;
+            this._cageRightPoseSprite.x = rc.x + jitterR + shakeX;
+            this._cageRightPoseSprite.y = rc.y + hopY;
+            this._cageRightPoseSprite.scale.set(sx, sy);
+            if (evR) evR.setTransparent(true);
+            this._rightPoseSwapped = true;
+        } else {
+            this._cageRightPoseSprite.visible = false;
+            if (this._rightPoseSwapped) {
+                if (evR && Controller.shatterTargetSide !== 'right' && !$gameSwitches.value(CFG.switchBigFish)) {
+                    evR.setTransparent(false);
+                }
+                this._rightPoseSwapped = false;
+            }
+        }
     };
 
     Spriteset_Map.prototype._updateShatterSprite = function(lc, rc) {
@@ -1328,7 +1445,7 @@
         var center = isLeft ? lc : rc;
         this._cageShatterSprite.visible = true;
         this._cageShatterSprite.x = center.x;
-        this._cageShatterSprite.y = center.y + 8;
+        this._cageShatterSprite.y = center.y;
 
         // 掉帧卡顿感：每 3 帧更新一次撕裂切片
         if (Controller.shatterFreezeFrame % 3 !== 0) {
@@ -1350,10 +1467,10 @@
         var srcY = 0;
         var srcW = customPic ? charBmp.width : Math.floor(charBmp.width / 3);
         var srcH = customPic ? charBmp.height : Math.floor(charBmp.height / 4);
-        var drawW = 84;
-        var drawH = 100;
+        var drawW = 80;
+        var drawH = 96;
         var baseX = Math.floor((b.width - drawW) / 2);
-        var baseY = b.height - drawH - 8;
+        var baseY = b.height - drawH;
 
         ctx.save();
         var slices = 22;
@@ -1415,20 +1532,20 @@
 
         if (Controller.lampPower > 0.02) {
             var drawSpot = function(cx, cy, isRed, power) {
-                var topY = cy - 196;
+                var topY = cy - 160;
                 var botY = cy + 68;
                 ctx.save();
                 ctx.globalCompositeOperation = 'destination-out';
-                var gOut = ctx.createRadialGradient(cx, cy - 34, 18, cx, cy - 10, 175);
-                gOut.addColorStop(0, 'rgba(255,255,255,' + (0.86 * power).toFixed(2) + ')');
-                gOut.addColorStop(0.65, 'rgba(255,255,255,' + (0.48 * power).toFixed(2) + ')');
+                var gOut = ctx.createRadialGradient(cx, cy - 42, 28, cx, cy - 16, 190);
+                gOut.addColorStop(0, 'rgba(255,255,255,' + (0.92 * power).toFixed(2) + ')');
+                gOut.addColorStop(0.68, 'rgba(255,255,255,' + (0.58 * power).toFixed(2) + ')');
                 gOut.addColorStop(1, 'rgba(255,255,255,0)');
                 ctx.fillStyle = gOut;
                 ctx.beginPath();
-                ctx.moveTo(cx - 26, topY);
-                ctx.lineTo(cx + 26, topY);
-                ctx.lineTo(cx + 150, botY);
-                ctx.lineTo(cx - 150, botY);
+                ctx.moveTo(cx - 36, topY);
+                ctx.lineTo(cx + 36, topY);
+                ctx.lineTo(cx + 156, botY);
+                ctx.lineTo(cx - 156, botY);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
@@ -1437,10 +1554,10 @@
                 var flicker = isRed ? (0.72 + 0.28 * Math.sin(Controller.totalTime * 22)) : (0.94 + 0.06 * Math.sin(Controller.totalTime * 7));
                 var gBeam = ctx.createLinearGradient(cx, topY, cx, botY);
                 if (isRed) {
-                    gBeam.addColorStop(0, 'rgba(255, 24, 38, ' + (0.55 * flicker).toFixed(2) + ')');
-                    gBeam.addColorStop(1, 'rgba(255, 20, 34, 0.04)');
+                    gBeam.addColorStop(0, 'rgba(255, 24, 38, ' + (0.62 * flicker).toFixed(2) + ')');
+                    gBeam.addColorStop(1, 'rgba(255, 20, 34, 0.06)');
                 } else {
-                    gBeam.addColorStop(0, 'rgba(230, 240, 255, ' + (0.28 * power * flicker).toFixed(2) + ')');
+                    gBeam.addColorStop(0, 'rgba(230, 240, 255, ' + (0.24 * power * flicker).toFixed(2) + ')');
                     gBeam.addColorStop(1, 'rgba(210, 224, 250, 0.02)');
                 }
                 ctx.fillStyle = gBeam;
@@ -1451,6 +1568,19 @@
                 ctx.lineTo(cx - 138, botY);
                 ctx.closePath();
                 ctx.fill();
+
+                // 淘汰瞬间：直接将铁笼顶部吊灯灯芯染成脉冲血红警报灯
+                if (isRed) {
+                    var bulbY = cy - 139;
+                    var gBulb = ctx.createRadialGradient(cx, bulbY, 2, cx, bulbY, 26);
+                    gBulb.addColorStop(0, 'rgba(255, 220, 225, ' + (0.95 * flicker).toFixed(2) + ')');
+                    gBulb.addColorStop(0.35, 'rgba(255, 24, 42, ' + (0.88 * flicker).toFixed(2) + ')');
+                    gBulb.addColorStop(1, 'rgba(255, 16, 30, 0)');
+                    ctx.fillStyle = gBulb;
+                    ctx.beginPath();
+                    ctx.arc(cx, bulbY, 26, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             };
 
             drawSpot(lc.x, lc.y, Controller.leftLampRed, Controller.lampPower);
@@ -1556,38 +1686,27 @@
             this._drawSinglePaper(ctx, item.x, item.y, item.rot, item.isYesSlip, customPaper);
         }
 
-        // 左笼：苍白纤手勾栏 + 折得方方正正的诗笺
+        // 左笼：从铁栏缝里递出折得方方正正的诗笺（若有自定义手部图则一并显示；无图时不画突兀色块手）
         if (Controller.claudeHandProgress > 0.02) {
             var hp = Controller.claudeHandProgress;
-            var tremble = (Controller.claudeHandTighten > 0 ? Math.sin(Controller.totalTime * 48) * 2.2 : Math.sin(Controller.totalTime * 6) * 0.6);
-            var hx = lc.x + 42 + hp * 24 + tremble;
-            var hy = lc.y - 34;
+            var tremble = (Controller.claudeHandTighten > 0 ? Math.sin(Controller.totalTime * 48) * 2.0 : Math.sin(Controller.totalTime * 5) * 0.5);
+            var hx = lc.x + 28 + hp * 24 + tremble;
+            var hy = lc.y - 36;
 
             var customHand = PictureAsset.getOptionalBitmap(CFG.imgs.claudeHand);
-            if (customHand) {
+            if (customHand && !PictureAsset.getOptionalBitmap(CFG.imgs.claudeHandPose)) {
                 ctx.save();
                 ctx.globalAlpha = Math.min(1, hp * 1.2);
                 ctx.drawImage(customHand._canvas || customHand._image, Math.round(hx - customHand.width / 2), Math.round(hy - customHand.height / 2));
                 ctx.restore();
-            } else {
-                ctx.save();
-                ctx.globalAlpha = Math.min(1, hp * 1.2);
-                // 苍白手腕与五指勾住铁栏
-                ctx.fillStyle = '#ede8e4';
-                ctx.fillRect(hx - 14, hy - 4, 20, 9);
-                ctx.fillStyle = '#fbf8f5';
-                for (var f = 0; f < 4; f++) {
-                    ctx.fillRect(hx + 4, hy - 6 + f * 4, 9, 3);
-                }
-                ctx.restore();
             }
 
-            // 方正折叠诗笺（若淘汰 Claude 则滑落进黑水）
+            // 方正折叠诗笺（若淘汰 Claude 则从铁栏边滑落进黑水）
             var py = hy + 6 + (Controller.claudePaperDropped ? Controller.claudePaperDropY : 0);
             ctx.save();
             ctx.globalAlpha = Controller.claudePaperDropped ? Math.max(0.2, 1 - Controller.claudePaperDropY / 72) : Math.min(1, hp * 1.2);
-            ctx.translate(hx + 16, py);
-            ctx.rotate(Controller.claudePaperDropped ? 0.5 : -0.12);
+            ctx.translate(hx + 12, py);
+            ctx.rotate(Controller.claudePaperDropped ? 0.5 : -0.10);
             ctx.fillStyle = '#f5eedc';
             ctx.fillRect(-12, -9, 24, 18);
             ctx.strokeStyle = '#a88462';
@@ -1600,18 +1719,20 @@
             ctx.restore();
         }
 
-        // 右笼：蓝色大肥鲸鱼尾滑出拍地又光速缩回
-        if (Controller.bigFishTailTimer > 0) {
-            var t = Controller.bigFishTailTimer; // 1.15 -> 0
+        // 右笼：若已配置整身拍尾姿态图（Cage_BigFish_TailPose.png），由 z=3 姿态精灵接管，避免再画第二条尾巴
+        var hasRightPose = Boolean(PictureAsset.getOptionalBitmap(CFG.imgs.bigFishTailPose));
+        if (Controller.bigFishTailTimer > 0 && !hasRightPose) {
+            var dur = Math.max(0.5, Controller.bigFishTailDuration || 1.15);
+            var tNorm = Controller.bigFishTailTimer / dur; // 1 -> 0
             var ext = 0;
-            if (t > 0.72) {
-                ext = (1.15 - t) / 0.43; // 滑出
-            } else if (t > 0.25) {
+            if (tNorm > 0.65) {
+                ext = (1 - tNorm) / 0.35; // 滑出
+            } else if (tNorm > 0.22) {
                 ext = 1.0; // 拍在地板上停留
             } else {
-                ext = t / 0.25; // 嗖一下光速缩回
+                ext = tNorm / 0.22; // 嗖一下光速缩回
             }
-            var slapSquash = (t <= 0.72 && t > 0.52) ? 1.18 : 1.0;
+            var slapSquash = (tNorm <= 0.65 && tNorm > 0.45) ? 1.18 : 1.0;
             var tx = rc.x - 42 - ext * 44;
             var ty = rc.y + 8;
 
@@ -1626,7 +1747,6 @@
                 ctx.save();
                 ctx.translate(tx, ty);
                 ctx.scale(slapSquash, 1 / slapSquash);
-                // 蓝色肥尾巴本体
                 ctx.fillStyle = '#2d5cc7';
                 ctx.beginPath();
                 ctx.moveTo(46, -6);
@@ -1637,7 +1757,6 @@
                 ctx.strokeStyle = '#9ac6ff';
                 ctx.lineWidth = 2;
                 ctx.stroke();
-                // 鲸鱼尾鳍
                 ctx.fillStyle = '#3f76f0';
                 ctx.beginPath();
                 ctx.moveTo(-14, 1);
@@ -1657,21 +1776,21 @@
             this._drawSinglePaper(ctx, pr.x, pr.y, pr.rot, pr.isYesSlip, customPaper);
         }
 
-        // 右笼头顶灰字 <深度思考中……> 浮动气泡
+        // 右笼头顶灰字 <深度思考中……> 浮动气泡（位于铁笼顶部上方）
         if (Controller.bigFishThinkTimer > 0) {
             var dots = '.'.repeat(1 + Math.floor(Controller.totalTime * 5) % 3);
             ctx.save();
             ctx.fillStyle = 'rgba(18, 22, 32, 0.88)';
-            ctx.fillRect(rc.x - 86, rc.y - 168, 172, 28);
+            ctx.fillRect(rc.x - 86, rc.y - 202, 172, 28);
             ctx.strokeStyle = '#6c768a';
             ctx.lineWidth = 1.5;
-            ctx.strokeRect(rc.x - 86, rc.y - 168, 172, 28);
+            ctx.strokeRect(rc.x - 86, rc.y - 202, 172, 28);
             ctx.restore();
             b.fontFace = FONT_FACE;
             b.fontSize = 14;
             b.textColor = '#aeb8c9';
             b.outlineWidth = 2;
-            b.drawText('<深度思考中' + dots + '>', rc.x - 86, rc.y - 166, 172, 24, 'center');
+            b.drawText('<深度思考中' + dots + '>', rc.x - 86, rc.y - 200, 172, 24, 'center');
         }
     };
 
